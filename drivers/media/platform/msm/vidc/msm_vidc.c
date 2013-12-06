@@ -683,8 +683,7 @@ int output_buffer_cache_invalidate(struct msm_vidc_inst *inst,
 				return -EINVAL;
 			}
 		} else
-			dprintk(VIDC_DBG, "%s: NULL handle for plane %d\n",
-					__func__, i);
+			dprintk(VIDC_ERR, "%s: WARN: NULL handle", __func__);
 	}
 	return 0;
 }
@@ -773,6 +772,7 @@ int msm_vidc_release_buffers(void *instance, int buffer_type)
 		mutex_unlock(&inst->lock);
 		if (!release_buf)
 			continue;
+		release_buf = false;
 		if (inst->session_type == MSM_VIDC_DECODER)
 			rc = msm_vdec_release_buf(instance,
 				&buffer_info);
@@ -962,7 +962,7 @@ int msm_vidc_dqbuf(void *instance, struct v4l2_buffer *b)
 		}
 	}
 
-	if (!buffer_info && inst->map_output_buffer) {
+	if (!buffer_info) { 
 		dprintk(VIDC_ERR,
 			"%s: error - no buffer info found in registered list\n",
 			__func__);
@@ -1129,6 +1129,8 @@ static int setup_event_queue(void *inst,
 {
 	int rc = 0;
 	struct msm_vidc_inst *vidc_inst = (struct msm_vidc_inst *)inst;
+	spin_lock_init(&pvdev->fh_lock);
+	INIT_LIST_HEAD(&pvdev->fh_list);
 
 	v4l2_fh_init(&vidc_inst->event_handler, pvdev);
 	v4l2_fh_add(&vidc_inst->event_handler);
