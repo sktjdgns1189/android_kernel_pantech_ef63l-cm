@@ -84,20 +84,9 @@ error_pt:
 	}
 	return status;
 }
-#ifndef CONFIG_F_QUALCOMM_BUGFIX_KGSL_SPINLOCK_BUG
-static void kgsl_destroy_pagetable(struct kref *kref)
-{
-	struct kgsl_pagetable *pagetable = container_of(kref,
-		struct kgsl_pagetable, refcount);
-	unsigned long flags;
 
-	spin_lock_irqsave(&kgsl_driver.ptlock, flags);
-	list_del(&pagetable->list);
-	spin_unlock_irqrestore(&kgsl_driver.ptlock, flags);
-#else
 static void _kgsl_destroy_pagetable(struct kgsl_pagetable *pagetable)
 {
-#endif
 	pagetable_remove_sysfs_objects(pagetable);
 
 	kgsl_cleanup_pt(pagetable);
@@ -111,8 +100,9 @@ static void _kgsl_destroy_pagetable(struct kgsl_pagetable *pagetable)
 
 	kfree(pagetable);
 }
-#ifdef CONFIG_F_QUALCOMM_BUGFIX_KGSL_SPINLOCK_BUG
-static void kgsl_destroy_pagetable(struct kref *kref) {
+
+static void kgsl_destroy_pagetable(struct kref *kref)
+{
 	struct kgsl_pagetable *pagetable = container_of(kref,
 		struct kgsl_pagetable, refcount);
 	unsigned long flags;
@@ -124,7 +114,8 @@ static void kgsl_destroy_pagetable(struct kref *kref) {
 	_kgsl_destroy_pagetable(pagetable);
 }
 
-static void kgsl_destroy_pagetable_locked(struct kref *kref) {
+static void kgsl_destroy_pagetable_locked(struct kref *kref)
+{
 	struct kgsl_pagetable *pagetable = container_of(kref,
 		struct kgsl_pagetable, refcount);
 
@@ -133,7 +124,6 @@ static void kgsl_destroy_pagetable_locked(struct kref *kref) {
 	_kgsl_destroy_pagetable(pagetable);
 }
 
-#endif
 static inline void kgsl_put_pagetable(struct kgsl_pagetable *pagetable)
 {
 	if (pagetable)
@@ -153,11 +143,7 @@ kgsl_get_pagetable(unsigned long name)
 				ret = pt;
 				break;
 			}
-#ifdef CONFIG_F_QUALCOMM_BUGFIX_KGSL_SPINLOCK_BUG
 			kref_put(&pt->refcount, kgsl_destroy_pagetable_locked);
-#else
-			kref_put(&pt->refcount, kgsl_destroy_pagetable);
-#endif
 		}
 	}
 
@@ -357,19 +343,11 @@ kgsl_mmu_get_ptname_from_ptbase(struct kgsl_mmu *mmu, phys_addr_t pt_base)
 		if (kref_get_unless_zero(&pt->refcount)) {
 			if (mmu->mmu_ops->mmu_pt_equal(mmu, pt, pt_base)) {
 				ptid = (int) pt->name;
-#ifdef CONFIG_F_QUALCOMM_BUGFIX_KGSL_SPINLOCK_BUG
 				kref_put(&pt->refcount,
 					kgsl_destroy_pagetable_locked);
-#else
-				kref_put(&pt->refcount, kgsl_destroy_pagetable);
-#endif
 				break;
 			}
-#ifdef CONFIG_F_QUALCOMM_BUGFIX_KGSL_SPINLOCK_BUG
 			kref_put(&pt->refcount, kgsl_destroy_pagetable_locked);
-#else
-			kref_put(&pt->refcount, kgsl_destroy_pagetable);
-#endif
 		}
 	}
 	spin_unlock(&kgsl_driver.ptlock);
@@ -394,30 +372,18 @@ kgsl_mmu_log_fault_addr(struct kgsl_mmu *mmu, phys_addr_t pt_base,
 				if ((addr & ~(PAGE_SIZE-1)) == pt->fault_addr) {
 					ret = 1;
 					kref_put(&pt->refcount,
-#ifdef CONFIG_F_QUALCOMM_BUGFIX_KGSL_SPINLOCK_BUG
 						kgsl_destroy_pagetable_locked);
-#else
-						kgsl_destroy_pagetable);
-#endif
 					break;
 				} else {
 					pt->fault_addr =
 						(addr & ~(PAGE_SIZE-1));
 					ret = 0;
 					kref_put(&pt->refcount,
-#ifdef CONFIG_F_QUALCOMM_BUGFIX_KGSL_SPINLOCK_BUG
 						kgsl_destroy_pagetable_locked);
-#else
-						kgsl_destroy_pagetable);
-#endif
 					break;
 				}
 			}
-#ifdef CONFIG_F_QUALCOMM_BUGFIX_KGSL_SPINLOCK_BUG
 			kref_put(&pt->refcount, kgsl_destroy_pagetable_locked);
-#else
-			kref_put(&pt->refcount, kgsl_destroy_pagetable);
-#endif
 		}
 	}
 	spin_unlock(&kgsl_driver.ptlock);
@@ -435,6 +401,10 @@ int kgsl_mmu_init(struct kgsl_device *device)
 	status = kgsl_allocate_contiguous(&mmu->setstate_memory, PAGE_SIZE);
 	if (status)
 		return status;
+
+	/* Mark the setstate memory as read only */
+	mmu->setstate_memory.flags |= KGSL_MEMFLAGS_GPUREADONLY;
+
 	kgsl_sharedmem_set(device, &mmu->setstate_memory, 0, 0,
 				mmu->setstate_memory.size);
 

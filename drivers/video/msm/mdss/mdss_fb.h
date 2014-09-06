@@ -169,6 +169,9 @@ struct msm_fb_data_type {
 	u32 dest;
 	struct fb_info *fbi;
 
+	int idle_time;
+	struct delayed_work idle_notify_work;
+
 	int op_enable;
 	u32 fb_imgType;
 	int panel_reconfig;
@@ -217,6 +220,9 @@ struct msm_fb_data_type {
 	struct task_struct *splash_thread;
 	bool splash_logo_enabled;
 
+	wait_queue_head_t ioctl_q;
+	atomic_t ioctl_ref_cnt;
+
 	struct msm_fb_backup_type msm_fb_backup;
 	struct completion power_set_comp;
 	u32 is_power_setting;
@@ -253,4 +259,5 @@ struct sync_fence *mdss_fb_sync_get_fence(struct sw_sync_timeline *timeline,
 				const char *fence_name, int val);
 int mdss_fb_register_mdp_instance(struct msm_mdp_interface *mdp);
 int mdss_fb_dcm(struct msm_fb_data_type *mfd, int req_state);
+int mdss_fb_suspres_panel(struct device *dev, void *data);
 #endif /* MDSS_FB_H */

@@ -665,7 +665,8 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 	total_sizedwords += (flags & KGSL_CMD_FLAGS_INTERNAL_ISSUE) ? 2 : 0;
 
 	/* Add two dwords for the CP_INTERRUPT */
-	total_sizedwords += drawctxt ? 2 : 0;
+	total_sizedwords +=
+		(drawctxt || (flags & KGSL_CMD_FLAGS_INTERNAL_ISSUE)) ?  2 : 0;
 
 	if (adreno_is_a3xx(adreno_dev))
 		total_sizedwords += 7;
@@ -695,11 +696,7 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 
 	/* Add space for the power on shader fixup if we need it */
 	if (flags & KGSL_CMD_FLAGS_PWRON_FIXUP)
-#ifdef CONFIG_F_QUALCOMM_GPU_PATCH_FOR_PAGE_FAULT
 		total_sizedwords += 9;
-#else
-		total_sizedwords += 5;
-#endif
 
 	ringcmds = adreno_ringbuffer_allocspace(rb, drawctxt, total_sizedwords);
 
@@ -721,12 +718,11 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 	}
 
 	if (flags & KGSL_CMD_FLAGS_PWRON_FIXUP) {
-#ifdef CONFIG_F_QUALCOMM_GPU_PATCH_FOR_PAGE_FAULT
 		/* Disable protected mode for the fixup */
 		GSL_RB_WRITE(rb->device, ringcmds, rcmd_gpu,
 			cp_type3_packet(CP_SET_PROTECTED_MODE, 1));
 		GSL_RB_WRITE(rb->device, ringcmds, rcmd_gpu, 0);
-#endif
+
 		GSL_RB_WRITE(rb->device, ringcmds, rcmd_gpu, cp_nop_packet(1));
 		GSL_RB_WRITE(rb->device, ringcmds, rcmd_gpu,
 				KGSL_PWRON_FIXUP_IDENTIFIER);
@@ -736,12 +732,11 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 			adreno_dev->pwron_fixup.gpuaddr);
 		GSL_RB_WRITE(rb->device, ringcmds, rcmd_gpu,
 			adreno_dev->pwron_fixup_dwords);
-#ifdef CONFIG_F_QUALCOMM_GPU_PATCH_FOR_PAGE_FAULT
+
 		/* Re-enable protected mode */
 		GSL_RB_WRITE(rb->device, ringcmds, rcmd_gpu,
 			cp_type3_packet(CP_SET_PROTECTED_MODE, 1));
 		GSL_RB_WRITE(rb->device, ringcmds, rcmd_gpu, 1);
-#endif
 	}
 
 	/* Add any IB required for profiling if it is enabled */

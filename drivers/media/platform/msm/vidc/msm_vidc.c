@@ -63,8 +63,14 @@ int msm_vidc_poll(void *instance, struct file *filp,
 		struct poll_table_struct *wait)
 {
 	struct msm_vidc_inst *inst = instance;
-	struct vb2_queue *outq = &inst->bufq[OUTPUT_PORT].vb2_bufq;
-	struct vb2_queue *capq = &inst->bufq[CAPTURE_PORT].vb2_bufq;
+	struct vb2_queue *outq = NULL;
+	struct vb2_queue *capq = NULL;
+
+	if (!inst)
+		return -EINVAL;
+
+	outq = &inst->bufq[OUTPUT_PORT].vb2_bufq;
+	capq = &inst->bufq[CAPTURE_PORT].vb2_bufq;
 
 	poll_wait(filp, &inst->event_handler.wait, wait);
 	poll_wait(filp, &capq->done_wq, wait);
@@ -77,6 +83,9 @@ int msm_vidc_wait(void *instance)
 {
 	struct msm_vidc_inst *inst = instance;
 	int rc = 0;
+
+	if (!inst)
+		return -EINVAL;
 
 	wait_event(inst->kernel_event_queue, (rc = get_poll_flags(inst)));
 	return rc;
@@ -183,6 +192,15 @@ int msm_vidc_g_ctrl(void *instance, struct v4l2_control *control)
 		return msm_vdec_g_ctrl(instance, control);
 	if (inst->session_type == MSM_VIDC_ENCODER)
 		return msm_venc_g_ctrl(instance, control);
+	return -EINVAL;
+}
+int msm_vidc_s_ext_ctrl(void *instance, struct v4l2_ext_controls *control)
+{
+	struct msm_vidc_inst *inst = instance;
+	if (!inst || !control)
+		return -EINVAL;
+	if (inst->session_type == MSM_VIDC_ENCODER)
+		return msm_venc_s_ext_ctrl(instance, control);
 	return -EINVAL;
 }
 int msm_vidc_reqbufs(void *instance, struct v4l2_requestbuffers *b)
@@ -805,6 +823,10 @@ free_and_unmap:
 int msm_vidc_encoder_cmd(void *instance, struct v4l2_encoder_cmd *enc)
 {
 	struct msm_vidc_inst *inst = instance;
+	if (!inst || !inst->core || !enc) {
+		dprintk(VIDC_ERR, "%s invalid params\n", __func__);
+		return -EINVAL;
+	}
 	if (inst->session_type == MSM_VIDC_ENCODER)
 		return msm_venc_cmd(instance, enc);
 	return -EINVAL;
@@ -813,6 +835,10 @@ int msm_vidc_encoder_cmd(void *instance, struct v4l2_encoder_cmd *enc)
 int msm_vidc_decoder_cmd(void *instance, struct v4l2_decoder_cmd *dec)
 {
 	struct msm_vidc_inst *inst = instance;
+	if (!inst || !inst->core || !dec) {
+		dprintk(VIDC_ERR, "%s invalid params\n", __func__);
+		return -EINVAL;
+	}
 	if (inst->session_type == MSM_VIDC_DECODER)
 		return msm_vdec_cmd(instance, dec);
 	return -EINVAL;
@@ -1200,7 +1226,6 @@ void *msm_vidc_open(int core_id, int session_type)
 	INIT_LIST_HEAD(&inst->pendingq);
 	INIT_LIST_HEAD(&inst->internalbufs);
 	INIT_LIST_HEAD(&inst->persistbufs);
-	INIT_LIST_HEAD(&inst->ctrl_clusters);
 	INIT_LIST_HEAD(&inst->registered_bufs);
 	INIT_LIST_HEAD(&inst->outputbufs);
 	init_waitqueue_head(&inst->kernel_event_queue);
@@ -1276,7 +1301,6 @@ static void cleanup_instance(struct msm_vidc_inst *inst)
 {
 	struct list_head *ptr, *next;
 	struct vb2_buf_entry *entry;
-	struct internal_buf *buf;
 	if (inst) {
 		mutex_lock(&inst->lock);
 		if (!list_empty(&inst->pendingq)) {
@@ -1288,37 +1312,28 @@ static void cleanup_instance(struct msm_vidc_inst *inst)
 			}
 		}
 		if (!list_empty(&inst->internalbufs)) {
-			list_for_each_safe(ptr, next, &inst->internalbufs) {
-				buf = list_entry(ptr, struct internal_buf,
-						list);
-				list_del(&buf->list);
-				mutex_unlock(&inst->lock);
-				msm_comm_smem_free(inst, buf->handle);
-				kfree(buf);
-				mutex_lock(&inst->lock);
-			}
+			mutex_unlock(&inst->lock);
+			if (msm_comm_release_scratch_buffers(inst))
+				dprintk(VIDC_ERR,
+					"Failed to release scratch buffers\n");
+
+			mutex_lock(&inst->lock);
 		}
 		if (!list_empty(&inst->persistbufs)) {
-			list_for_each_safe(ptr, next, &inst->persistbufs) {
-				buf = list_entry(ptr, struct internal_buf,
-						list);
-				list_del(&buf->list);
-				mutex_unlock(&inst->lock);
-				msm_comm_smem_free(inst, buf->handle);
-				kfree(buf);
-				mutex_lock(&inst->lock);
-			}
+			mutex_unlock(&inst->lock);
+			if (msm_comm_release_persist_buffers(inst))
+				dprintk(VIDC_ERR,
+					"Failed to release persist buffers\n");
+
+			mutex_lock(&inst->lock);
 		}
 		if (!list_empty(&inst->outputbufs)) {
-			list_for_each_safe(ptr, next, &inst->outputbufs) {
-				buf = list_entry(ptr, struct internal_buf,
-						list);
-				list_del(&buf->list);
-				mutex_unlock(&inst->lock);
-				msm_comm_smem_free(inst, buf->handle);
-				kfree(buf);
-				mutex_lock(&inst->lock);
-			}
+			mutex_unlock(&inst->lock);
+			if (msm_comm_release_output_buffers(inst))
+				dprintk(VIDC_ERR,
+					"Failed to release output buffers\n");
+
+			mutex_lock(&inst->lock);
 		}
 		if (inst->extradata_handle) {
 			mutex_unlock(&inst->lock);
@@ -1326,7 +1341,6 @@ static void cleanup_instance(struct msm_vidc_inst *inst)
 			mutex_lock(&inst->lock);
 		}
 		mutex_unlock(&inst->lock);
-		msm_smem_delete_client(inst->mem_client);
 		debugfs_remove_recursive(inst->debugfs_root);
 	}
 }
@@ -1384,7 +1398,9 @@ int msm_vidc_close(void *instance)
 	for (i = 0; i < MAX_PORT_NUM; i++)
 		vb2_queue_release(&inst->bufq[i].vb2_bufq);
 
+	msm_smem_delete_client(inst->mem_client);
 	pr_info(VIDC_DBG_TAG "Closed video instance: %p\n", VIDC_INFO, inst);
 	kfree(inst);
+
 	return 0;
 }

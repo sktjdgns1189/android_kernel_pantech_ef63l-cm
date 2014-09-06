@@ -402,7 +402,7 @@ static int mdss_dsi_off(struct mdss_panel_data *pdata)
 
 	if (!pdata->panel_info.panel_power_on) {
 		pr_warn("%s:%d Panel already off.\n", __func__, __LINE__);
-		return -EPERM;
+		return 0;
 	}
 
 	pdata->panel_info.panel_power_on = 0;
@@ -484,8 +484,6 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 		return ret;
 	}
 
-	pdata->panel_info.panel_power_on = 1;
-
 	if (!pdata->panel_info.mipi.lp11_init)
 		mdss_dsi_panel_reset(pdata, 1);
 
@@ -493,11 +491,17 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 	if (ret) {
 		pr_err("%s: failed to enable bus clocks. rc=%d\n", __func__,
 			ret);
-		mdss_dsi_panel_power_on(pdata, 0);
+		ret = mdss_dsi_panel_power_on(pdata, 0);
+		if (ret) {
+			pr_err("%s: Panel reset failed. rc=%d\n",
+					__func__, ret);
+			return ret;
+		}
 		pdata->panel_info.panel_power_on = 0;
 		return ret;
 	}
 
+	pdata->panel_info.panel_power_on = 1;
 	mdss_dsi_phy_sw_reset((ctrl_pdata->ctrl_base));
 	mdss_dsi_phy_init(pdata);
 	mdss_dsi_bus_clk_stop(ctrl_pdata);
@@ -863,6 +867,8 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 	pr_debug("%s+:event=%d\n", __func__, event);
+
+	MDSS_XLOG(event, arg, ctrl_pdata->ndx, 0x3333);
 
 	switch (event) {
 	case MDSS_EVENT_UNBLANK:
@@ -1731,18 +1737,9 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	ctrl_pdata->disp_en_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
 		"qcom,platform-enable-gpio", 0);
 
-	if (!gpio_is_valid(ctrl_pdata->disp_en_gpio)) {
+	if (!gpio_is_valid(ctrl_pdata->disp_en_gpio))
 		pr_err("%s:%d, Disp_en gpio not specified\n",
 						__func__, __LINE__);
-	} else {
-		rc = gpio_request(ctrl_pdata->disp_en_gpio, "disp_enable");
-		if (rc) {
-			pr_err("request reset gpio failed, rc=%d\n",
-			       rc);
-			gpio_free(ctrl_pdata->disp_en_gpio);
-			return -ENODEV;
-		}
-	}
 
 	if (pinfo->type == MIPI_CMD_PANEL) {
 		ctrl_pdata->disp_te_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
@@ -1789,46 +1786,23 @@ int dsi_panel_device_register(struct device_node *pan_node,
 
 	ctrl_pdata->rst_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
 			 "qcom,platform-reset-gpio", 0);
-	if (!gpio_is_valid(ctrl_pdata->rst_gpio)) {
+	if (!gpio_is_valid(ctrl_pdata->rst_gpio))
 		pr_err("%s:%d, reset gpio not specified\n",
 						__func__, __LINE__);
-	} else {
-		rc = gpio_request(ctrl_pdata->rst_gpio, "disp_rst_n");
-		if (rc) {
-			pr_err("request reset gpio failed, rc=%d\n",
-				rc);
-			gpio_free(ctrl_pdata->rst_gpio);
-			if (gpio_is_valid(ctrl_pdata->disp_en_gpio))
-				gpio_free(ctrl_pdata->disp_en_gpio);
-			return -ENODEV;
-		}
-	}
 
 	if (pinfo->mode_gpio_state != MODE_GPIO_NOT_VALID) {
 
 		ctrl_pdata->mode_gpio = of_get_named_gpio(
 					ctrl_pdev->dev.of_node,
 					"qcom,platform-mode-gpio", 0);
-		if (!gpio_is_valid(ctrl_pdata->mode_gpio)) {
+		if (!gpio_is_valid(ctrl_pdata->mode_gpio))
 			pr_info("%s:%d, mode gpio not specified\n",
 							__func__, __LINE__);
 		} else {
-			rc = gpio_request(ctrl_pdata->mode_gpio, "panel_mode");
-			if (rc) {
-				pr_err("request panel mode gpio failed,rc=%d\n",
-									rc);
-				gpio_free(ctrl_pdata->mode_gpio);
-				if (gpio_is_valid(ctrl_pdata->disp_en_gpio))
-					gpio_free(ctrl_pdata->disp_en_gpio);
-				if (gpio_is_valid(ctrl_pdata->rst_gpio))
-					gpio_free(ctrl_pdata->rst_gpio);
-				if (gpio_is_valid(ctrl_pdata->disp_te_gpio))
-					gpio_free(ctrl_pdata->disp_te_gpio);
-				return -ENODEV;
-			}
-		}
+		ctrl_pdata->mode_gpio = -EINVAL;
 	}
 #endif
+
 	if (mdss_dsi_clk_init(ctrl_pdev, ctrl_pdata)) {
 		pr_err("%s: unable to initialize Dsi ctrl clks\n", __func__);
 		return -EPERM;

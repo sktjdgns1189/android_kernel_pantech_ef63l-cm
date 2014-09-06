@@ -11,7 +11,7 @@
 # set toolchain
 ##############################################################################
 export ARCH=arm
-export CROSS_COMPILE=~/your toolchain path/arm-eabi-4.7/bin/arm-eabi-
+export CROSS_COMPILE=/opt/toolchains/arm-eabi-4.7/bin/arm-eabi-
 export LINUX_BIN_PATH=$PWD/obj
 export SYS_PANTECH_SECBOOT=yes
 rm -rf $LINUX_BIN_PATH
