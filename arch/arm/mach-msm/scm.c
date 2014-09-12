@@ -22,6 +22,12 @@
 
 #include <mach/scm.h>
 
+#if defined(CONFIG_PANTECH_DEBUG)
+#ifdef CONFIG_PANTECH_DEBUG_SCHED_LOG  //p14291_pantech_dbg
+#include <mach/pantech_debug.h>
+#endif
+#endif
+
 #define SCM_ENOMEM		-5
 #define SCM_EOPNOTSUPP		-4
 #define SCM_EINVAL_ADDR		-3
@@ -227,6 +233,16 @@ static int scm_call_common(u32 svc_id, u32 cmd_id, const void *cmd_buf,
 		memcpy(scm_get_command_buffer(scm_buf), cmd_buf, cmd_len);
 
 	mutex_lock(&scm_lock);
+
+#if 0
+#if defined(CONFIG_PANTECH_DEBUG)
+#ifdef CONFIG_PANTECH_DEBUG_SCHED_LOG  //p14291_121113_add_scmlog
+    if(pantech_debug_enable)
+        pantechdbg_sched_msg("^^SCM CALL [%d], [%d]",svc_id, cmd_id);
+#endif
+#endif
+#endif
+
 	ret = __scm_call(scm_buf);
 	mutex_unlock(&scm_lock);
 	if (ret)
@@ -308,6 +324,7 @@ int scm_call(u32 svc_id, u32 cmd_id, const void *cmd_buf, size_t cmd_len,
 	cmd = kzalloc(PAGE_ALIGN(len), GFP_KERNEL);
 	if (!cmd)
 		return -ENOMEM;
+
 
 	ret = scm_call_common(svc_id, cmd_id, cmd_buf, cmd_len, resp_buf,
 				resp_len, cmd, len);

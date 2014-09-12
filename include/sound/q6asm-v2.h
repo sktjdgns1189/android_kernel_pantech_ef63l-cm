@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -165,7 +165,6 @@ struct audio_client {
 	/* Relative or absolute TS */
 	atomic_t	       time_flag;
 	atomic_t	       nowait_cmd_cnt;
-	atomic_t               mem_state;
 	void		       *priv;
 	uint32_t               io_mode;
 	uint64_t	       time_stamp;
@@ -177,7 +176,6 @@ struct audio_client {
 	struct audio_port_data port[2];
 	wait_queue_head_t      cmd_wait;
 	wait_queue_head_t      time_wait;
-	wait_queue_head_t      mem_wait;
 	int                    perf_mode;
 	int					   stream_id;
 	/* audio cache operations fptr*/
@@ -362,6 +360,52 @@ int q6asm_media_format_block_amrwbplus(struct audio_client *ac,
 
 int q6asm_ds1_set_endp_params(struct audio_client *ac,
 				int param_id, int param_value);
+
+#ifdef CONFIG_PANTECH_SND_QSOUND
+
+#define QSOUND_EQ_MODULE_ID				0x1000c000
+#define QSOUND_EQ_ENABLE				0x1000c001
+#define QSOUND_EQ_NUM_BANDS				0x1000c002
+#define QSOUND_EQ_LEVEL_RANGE				0x1000c003
+#define QSOUND_EQ_CURRENT_BAND				0x1000c00b // used for band level, center freq, and freq range
+#define QSOUND_EQ_BAND_LEVEL				0x1000c004
+#define QSOUND_EQ_CENTER_FREQ				0x1000c005
+#define QSOUND_EQ_FREQ_RANGE				0x1000c006
+#define QSOUND_EQ_CUR_PRESET				0x1000c008
+#define QSOUND_EQ_NUM_PRESETS				0x1000c009
+#define QSOUND_EQ_PRESET_NAME				0x1000c00a
+#define QSOUND_EQ_BULK_LEVEL				0x1000c00c
+#define QSOUND_EQ_BAND_LEVELS				0x1000c00e // Gets/Sets the gain set for all the equalizer bands. (#bands * int16_t)
+
+#define QSOUND_VIRTUAL_MODULE_ID			0x1000c010
+#define QSOUND_VIRTUAL_ENABLE_ID			0x1000c011
+#define QSOUND_VIRTUAL_SPREAD_ID			0x1000c012
+#define QSOUND_VIRTUAL_OUTPUTCONFIG_ID			0x1000c013
+
+#define QSOUND_REVERB_MODULE_ID				0x1000c020
+#define QSOUND_REVERB_PRESET_ID				0x1000c021
+
+#define QSOUND_BASSBOOST_MODULE_ID			0x1000c030
+#define QSOUND_BASSBOOST_ENABLE_ID			0x1000c031
+#define QSOUND_BASSBOOST_STRENGTH_ID			0x1000c032
+
+#define QSOUND_LIMITER_MODULE_ID			0x1000c040
+#define QSOUND_LIMITER_ENABLE_ID			0x1000c041
+
+#define QSOUND_EXTREME_VOL_MODULE_ID			0x1000c050
+#define QSOUND_EXTREME_VOL_ENABLE_ID			0x1000c051
+#define QSOUND_EXTREME_VOL_STRENGTH_ID			0x1000c052
+#define QSOUND_EXTREME_VOL_PRESET_ID			0x1000c053 // Gets/sets a preset.
+
+#define QSOUND_EXCITER_MODULE_ID			0x1000c070
+#define QSOUND_EXCITER_ENABLE_ID			0x1000c071
+#define QSOUND_EXCITER_STRENGTH_ID			0x1000c072
+
+int q6asm_set_mqfx_param(int session_id, uint32_t module_id, uint32_t param_id, const void* param, size_t size);
+int q6asm_get_mqfx_param(int session_id, uint32_t module_id, uint32_t param_id, void* param, size_t size);
+
+#endif  //CONFIG_PANTECH_SND_QSOUND
+
 
 /* PP specific */
 int q6asm_equalizer(struct audio_client *ac, void *eq);

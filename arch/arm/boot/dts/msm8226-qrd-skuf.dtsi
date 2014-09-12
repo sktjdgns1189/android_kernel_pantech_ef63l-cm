@@ -125,8 +125,6 @@
 				FF FF FF FF FF FF FF FF FF FF
 				FF FF FF FF 3E 01];
 			goodix,fw_name = "gtp_fw.bin";
-			goodix,have-touch-key;
-			goodix,driver-send-cfg;
 		};
 	};
 };

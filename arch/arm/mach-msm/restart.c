@@ -37,6 +37,9 @@
 #include "msm_watchdog.h"
 #include "timer.h"
 #include "wdog_debug.h"
+#ifdef CONFIG_PANTECH_ERR_CRASH_LOGGING
+#include <mach/pantech_sys.h>
+#endif
 
 #define WDT0_RST	0x38
 #define WDT0_EN		0x40
@@ -76,9 +79,9 @@ static void *emergency_dload_mode_addr;
 static int dload_set(const char *val, struct kernel_param *kp);
 static int download_mode = 1;
 module_param_call(download_mode, dload_set, param_get_int,
-			&download_mode, 0644);
+		&download_mode, 0644);
 static int panic_prep_restart(struct notifier_block *this,
-			      unsigned long event, void *ptr)
+		unsigned long event, void *ptr)
 {
 	in_panic = 1;
 	return NOTIFY_DONE;
@@ -93,7 +96,7 @@ static void set_dload_mode(int on)
 	if (dload_mode_addr) {
 		__raw_writel(on ? 0xE47B337D : 0, dload_mode_addr);
 		__raw_writel(on ? 0xCE14091A : 0,
-		       dload_mode_addr + sizeof(unsigned int));
+				dload_mode_addr + sizeof(unsigned int));
 		mb();
 		dload_mode_enabled = on;
 	}
@@ -212,7 +215,7 @@ static void cpu_power_off(void *data)
 	int rc;
 
 	pr_err("PMIC Initiated shutdown %s cpu=%d\n", __func__,
-						smp_processor_id());
+			smp_processor_id());
 	if (smp_processor_id() == 0) {
 		/*
 		 * PMIC initiated power off, do not lower ps_hold, pmic will
@@ -224,7 +227,7 @@ static void cpu_power_off(void *data)
 		pr_err("Calling scm to disable arbiter\n");
 		/* call secure manager to disable arbiter and never return */
 		rc = scm_call_atomic1(SCM_SVC_PWR,
-						SCM_IO_DISABLE_PMIC_ARBITER, 1);
+				SCM_IO_DISABLE_PMIC_ARBITER, 1);
 
 		pr_err("SCM returned even when asked to busy loop rc=%d\n", rc);
 		pr_err("waiting on pmic to shut msm down\n");
@@ -275,6 +278,7 @@ static void msm_restart_prepare(const char *cmd)
 	else
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
 
+
 	if (cmd != NULL) {
 		if (!strncmp(cmd, "bootloader", 10)) {
 			__raw_writel(0x77665500, restart_reason);
@@ -288,6 +292,18 @@ static void msm_restart_prepare(const char *cmd)
 			__raw_writel(0x6f656d00 | code, restart_reason);
 		} else if (!strncmp(cmd, "edl", 3)) {
 			enable_emergency_dload_mode();
+#ifdef CONFIG_PANTECH_FS_AUTO_REPAIR 
+		/* added for ext4 auto repair */
+		} else if (!strncmp(cmd, "autorepair", 10)){
+			__raw_writel(0xDA000012, restart_reason);
+		} else if (!strncmp(cmd, "data_mount_err", 14)){
+			pantech_sys_reset_reason_set(SYS_RESET_REASON_DATA_MOUNT_ERR);
+			panic("EXT4-fs : data partition mount failed. going to run e2fsck\n");
+#endif
+#if defined(CONFIG_MACH_MSM8974_EF65S) && defined(CONFIG_PANTECH_ERR_CRASH_LOGGING)
+		} else if (!strncmp(cmd, "skt_restart", 11)){
+			pantech_sys_reset_reason_set(SYS_RESET_REASON_SKT_CHARGING);
+#endif
 		} else {
 			__raw_writel(0x77665501, restart_reason);
 		}
@@ -303,12 +319,16 @@ void msm_restart(char mode, const char *cmd)
 
 	msm_restart_prepare(cmd);
 
+#ifdef CONFIG_PANTECH_ERR_CRASH_LOGGING
+	pantech_sys_reset_reason_set(SYS_RESET_REASON_NORMAL);
+#endif
+
 	if (!use_restart_v2()) {
 		__raw_writel(0, msm_tmr0_base + WDT0_EN);
 		if (!(machine_is_msm8x60_fusion() ||
-		      machine_is_msm8x60_fusn_ffa())) {
+					machine_is_msm8x60_fusn_ffa())) {
 			mb();
-			 /* Actually reset the chip */
+			/* Actually reset the chip */
 			__raw_writel(0, PSHOLD_CTL_SU);
 			mdelay(5000);
 			pr_notice("PS_HOLD didn't work, falling back to watchdog\n");
@@ -338,8 +358,8 @@ static int __init msm_pmic_restart_init(void)
 
 	if (pmic_reset_irq != 0) {
 		rc = request_any_context_irq(pmic_reset_irq,
-					resout_irq_handler, IRQF_TRIGGER_HIGH,
-					"restart_from_pmic", NULL);
+				resout_irq_handler, IRQF_TRIGGER_HIGH,
+				"restart_from_pmic", NULL);
 		if (rc < 0)
 			pr_err("pmic restart irq fail rc = %d\n", rc);
 	} else {
@@ -360,6 +380,11 @@ static int __init msm_restart_init(void)
 		EMERGENCY_DLOAD_MODE_ADDR;
 	set_dload_mode(download_mode);
 #endif
+
+#ifdef CONFIG_PANTECH_ERR_CRASH_LOGGING
+	pantech_sys_reset_reason_init();
+#endif
+
 	msm_tmr0_base = msm_timer_get_timer0_base();
 	restart_reason = MSM_IMEM_BASE + RESTART_REASON_ADDR;
 	pm_power_off = msm_power_off;

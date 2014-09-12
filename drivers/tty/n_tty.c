@@ -73,6 +73,8 @@
 #define ECHO_OP_SET_CANON_COL 0x81
 #define ECHO_OP_ERASE_TAB 0x82
 
+#define ANDROID_SECURE_PATCH_CVE_2014_0196
+
 static inline int tty_put_user(struct tty_struct *tty, unsigned char x,
 			       unsigned char __user *ptr)
 {
@@ -1998,11 +2000,15 @@ static ssize_t n_tty_write(struct tty_struct *tty, struct file *file,
 			if (tty->ops->flush_chars)
 				tty->ops->flush_chars(tty);
 		} else {
-
 			while (nr > 0) {
+#if defined(ANDROID_SECURE_PATCH_CVE_2014_0196)
 				mutex_lock(&tty->output_lock);
+#endif
 				c = tty->ops->write(tty, b, nr);
+#if defined(ANDROID_SECURE_PATCH_CVE_2014_0196)
+
 				mutex_unlock(&tty->output_lock);
+#endif
 				if (c < 0) {
 					retval = c;
 					goto break_out;

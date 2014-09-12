@@ -398,7 +398,7 @@ static int qdss_bind(struct usb_configuration *c, struct usb_function *f)
 	}
 
 	if (gadget_is_dwc3(gadget))
-		dwc3_tx_fifo_resize_request(qdss->data, true);
+	dwc3_tx_fifo_resize_request(qdss->data, true);
 
 	return 0;
 fail:
@@ -418,7 +418,7 @@ static void qdss_unbind(struct usb_configuration *c, struct usb_function *f)
 	flush_workqueue(qdss->wq);
 
 	if (gadget_is_dwc3(gadget))
-		dwc3_tx_fifo_resize_request(qdss->data, false);
+	dwc3_tx_fifo_resize_request(qdss->data, false);
 
 	clear_eps(f);
 	clear_desc(gadget, f);
@@ -580,6 +580,10 @@ static int qdss_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 
 	if (qdss->usb_connected && ch->app_conn)
 		queue_work(qdss->wq, &qdss->connect_w);
+		
+#ifdef CONFIG_ANDROID_PANTECH_USB_MANAGER
+	usb_interface_enum_cb(QDSS_TYPE_FLAG);
+#endif
 
 	return 0;
 fail:
@@ -833,7 +837,7 @@ void usb_qdss_close(struct usb_qdss_ch *ch)
 	spin_unlock_irqrestore(&d_lock, flags);
 
 	if (gadget_is_dwc3(gadget))
-		msm_dwc3_restart_usb_session(gadget);
+	msm_dwc3_restart_usb_session(gadget);
 }
 EXPORT_SYMBOL(usb_qdss_close);
 

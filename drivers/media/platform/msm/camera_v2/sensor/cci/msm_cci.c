@@ -29,7 +29,11 @@
 #define CYCLES_PER_MICRO_SEC 4915
 #define CCI_MAX_DELAY 10000
 
+#ifdef CONFIG_PANTECH_CAMERA
+#define CCI_TIMEOUT msecs_to_jiffies(1000)
+#else
 #define CCI_TIMEOUT msecs_to_jiffies(100)
+#endif
 
 /* TODO move this somewhere else */
 #define MSM_CCI_DRV_NAME "msm_cci"
@@ -181,7 +185,7 @@ static int32_t msm_cci_data_queue(struct cci_device *cci_dev,
 	uint16_t i = 0, j = 0, k = 0, h = 0, len = 0;
 	int32_t rc = 0;
 	uint32_t cmd = 0, delay = 0;
-	uint8_t data[11];
+	uint8_t data[10];
 	uint16_t reg_addr = 0;
 	struct msm_camera_i2c_reg_setting *i2c_msg =
 		&c_ctrl->cfg.cci_i2c_write_cfg;
@@ -320,9 +324,15 @@ static int32_t msm_cci_i2c_read(struct v4l2_subdev *sd,
 	 * If this call fails, don't proceed with i2c_read call. This is to
 	 * avoid overflow / underflow of queue
 	 */
+#ifdef CONFIG_PANTECH_CAMERA // test
+	rc = msm_cci_validate_queue(cci_dev,
+		read_cfg->num_byte - 1,
+		master, queue);
+#else
 	rc = msm_cci_validate_queue(cci_dev,
 		cci_dev->cci_i2c_queue_info[master][queue].max_queue_size - 1,
 		master, queue);
+#endif
 	if (rc < 0) {
 		pr_err("%s:%d Initial validataion failed rc %d\n", __func__,
 			__LINE__, rc);
@@ -426,6 +436,10 @@ static int32_t msm_cci_i2c_read(struct v4l2_subdev *sd,
 			__LINE__, read_words, exp_words);
 		memset(read_cfg->data, 0, read_cfg->num_byte);
 		rc = -EINVAL;
+#ifdef CONFIG_PANTECH_CAMERA // test
+		msm_cci_flush_queue(cci_dev, master); //=> Please try to add this line
+#endif
+        
 		goto ERROR;
 	}
 	index = 0;
@@ -618,7 +632,7 @@ static int32_t msm_cci_i2c_write(struct v4l2_subdev *sd,
 		msm_cci_flush_queue(cci_dev, master);
 		goto ERROR;
 	} else {
-		rc = cci_dev->cci_master_info[master].status;
+		rc = 0;
 	}
 	CDBG("%s:%d X wait_for_completion_interruptible\n", __func__,
 		__LINE__);
@@ -778,8 +792,45 @@ static int32_t msm_cci_config(struct v4l2_subdev *sd,
 	struct msm_camera_cci_ctrl *cci_ctrl)
 {
 	int32_t rc = 0;
+#ifdef CONFIG_PANTECH_CAMERA // test
+    uint32_t cci_retry = 3;
+#endif
 	CDBG("%s line %d cmd %d\n", __func__, __LINE__,
 		cci_ctrl->cmd);
+#ifdef CONFIG_PANTECH_CAMERA // test
+       do {
+               switch (cci_ctrl->cmd) {
+               case MSM_CCI_INIT:
+                       rc = msm_cci_init(sd, cci_ctrl);
+                       break;
+               case MSM_CCI_RELEASE:
+                       rc = msm_cci_release(sd);
+                       break;
+               case MSM_CCI_I2C_READ:
+                       rc = msm_cci_i2c_read_bytes(sd, cci_ctrl);
+                       if(rc < 0)
+                            pr_err("%s line %d cmd %d\n", __func__, __LINE__, cci_ctrl->cmd);
+                       break;
+               case MSM_CCI_I2C_WRITE:
+                       rc = msm_cci_i2c_write(sd, cci_ctrl);
+                       break;
+               case MSM_CCI_GPIO_WRITE:
+                       break;
+               default:
+                       rc = -ENOIOCTLCMD;
+               }
+               CDBG("%s line %d rc %d\n", __func__, __LINE__, rc);
+               cci_retry--;
+       } while(rc < 0 && cci_retry > 0);
+       if(cci_retry < 2)
+       {
+            if(rc < 0)
+                pr_err("%s line %d cmd %d  FAIL ++++++++++\n", __func__, __LINE__, cci_ctrl->cmd);
+            else
+                pr_err("%s line %d cmd %d <cci_retry=%d> SUCCESS ++++++++++\n", __func__, __LINE__, cci_ctrl->cmd, cci_retry);
+       }
+                       
+#else
 	switch (cci_ctrl->cmd) {
 	case MSM_CCI_INIT:
 		rc = msm_cci_init(sd, cci_ctrl);
@@ -798,6 +849,7 @@ static int32_t msm_cci_config(struct v4l2_subdev *sd,
 	default:
 		rc = -ENOIOCTLCMD;
 	}
+#endif
 	CDBG("%s line %d rc %d\n", __func__, __LINE__, rc);
 	cci_ctrl->status = rc;
 	return rc;
@@ -1102,7 +1154,7 @@ static int __devinit msm_cci_probe(struct platform_device *pdev)
 {
 	struct cci_device *new_cci_dev;
 	int rc = 0;
-	CDBG("%s: pdev %p device id = %d\n", __func__, pdev, pdev->id);
+	pr_err("%s: pdev %p device id = %d\n", __func__, pdev, pdev->id);
 	new_cci_dev = kzalloc(sizeof(struct cci_device), GFP_KERNEL);
 	if (!new_cci_dev) {
 		CDBG("%s: no enough memory\n", __func__);
