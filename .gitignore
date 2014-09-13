@@ -84,3 +84,6 @@ GTAGS
 *.orig
 *~
 \#*#
+
+/dt.img
+/zImage
