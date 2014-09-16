@@ -129,7 +129,6 @@ static struct pan_io_data pan_io_data = {
 int pan_tm_key_resume(void);
 int pan_tm_key_suspend(void);
 void pan_tm_set_mode(int mode);
-void pan_tm_set_cover_state(int state);
 #endif
 
 int ioctl_debug(unsigned long arg);
@@ -495,21 +494,7 @@ long ts_fops_ioctl(struct file *filp,
 		pan_tm_key_resume();
 #endif		
 		break;
-#else
-	case TOUCH_IOCTL_SUSPEND:
-		io_info->suspend(io_info);		
-#if defined(CONFIG_KEYBOARD_TC370) && !defined(CONFIG_KEYBOARD_TC370_SLEEP)
-		pan_tm_key_suspend();
 #endif
-		break;
-	case TOUCH_IOCTL_RESUME:
-		io_info->resume(io_info);		
-#if defined(CONFIG_KEYBOARD_TC370) && !defined(CONFIG_KEYBOARD_TC370_SLEEP)
-		pan_tm_key_resume();
-#endif		
-		break;
-#endif
-
 	case TOUCH_IOCTL_DO_KEY:
 		dbg_ioctl("TOUCH_IOCTL_DO_KEY  = %d\n",(int)argp);			
 		if ( (int)argp == KEY_NUMERIC_STAR )
@@ -689,7 +674,6 @@ long ts_fops_ioctl(struct file *filp,
             dbg_cr("smart cover state is not equal. ic -> %d, ui -> %d\n",io_info->touch_mode_state.smart_cover,io_info->touch_mode_state.smart_cover_from_ui);
             io_info->touch_mode_state.smart_cover=io_info->touch_mode_state.smart_cover_from_ui;
           }
-          pan_tm_set_cover_state(io_info->touch_mode_state.smart_cover_from_ui);
           del_timer_sync(&io_info->touch_mode_state.check_smart_cover);
           break;
         default :
