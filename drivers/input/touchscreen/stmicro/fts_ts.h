@@ -31,7 +31,6 @@
 
 //++ p11309 - 2013.12.22 for disabled by wcjeong
 #define PAN_IRQ_WORKQUEUE
-#define PAN_TSP_POWER_CTRL
 #define SKY_PROCESS_CMD_KEY
 
 //++ p13106 2014.1.16 for touchMonitor App
