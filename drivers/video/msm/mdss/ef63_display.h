@@ -272,8 +272,7 @@ char oled_gamma_lsi[34] = {
 
 
 char locking[2] = {0xf7,0x01};
-// brightness fix by sktjdgns1189 & arter97
-char locking_disable[2] = {0xf7,0x02};
+char locking_disable[2] = {0xf7,0x00};
 char locking_lsi[2] = {0xf7,0x03};
 char temp_set[5] = {0xb8,0x00,0x04,0x00,0x00};
 char mtp_unlock[3] = {0xf0, 0x5a, 0x5a};
