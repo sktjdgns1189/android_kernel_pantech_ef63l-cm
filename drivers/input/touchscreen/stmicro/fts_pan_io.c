@@ -889,7 +889,7 @@ ssize_t write(struct file *file,
 	    dbg_cr("glove off\n");
 	    io_info->fts_command(io_info, FTS_CMD_MSHOVER_OFF);
 			io_info->mshover_enabled = 0;	
-	  }
+	  }/*
 	  else if(strncmp(buf, "pen_on",6) == 0){
 	    dbg_cr("pen on\n");
 	    io_info->fts_pen_mode_set(io_info,1);
@@ -897,7 +897,7 @@ ssize_t write(struct file *file,
 	  }else if(strncmp(buf, "pen_off",7) == 0){
 	    dbg_cr("pen off\n");
 	    io_info->fts_pen_mode_set(io_info,0);	
-	  }
+	  }*/
 
     else if(strncmp(buf, "error_check",11) == 0){
       dbg_cr("touch_error_cnt -> %d\n",touch_error_cnt);

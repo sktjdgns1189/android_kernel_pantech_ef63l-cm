@@ -35,7 +35,7 @@
 
 //++ p13106 2014.1.16 for touchMonitor App
 #define TOUCH_MONITOR
-#define PAN_TOUCH_SET_PEN_MODE
+//#define PAN_TOUCH_SET_PEN_MODE
 
 //++ P13106 2014.2.19 Touch Event Block when flip cover closed.
 #define PAN_TOUCH_EVENT_WITH_HALL_IC
