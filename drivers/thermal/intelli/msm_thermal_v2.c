@@ -45,7 +45,7 @@
 
 static struct msm_thermal_data msm_thermal_info;
 static struct delayed_work check_temp_work;
-static bool core_control_enabled = true;
+static bool core_control_enabled;
 static uint32_t cpus_offlined;
 static DEFINE_MUTEX(core_control_mutex);
 static uint32_t wakeup_ms;
@@ -58,7 +58,7 @@ static struct task_struct *freq_mitigation_task;
 static struct completion hotplug_notify_complete;
 static struct completion freq_mitigation_complete;
 
-static int enabled = 1;
+static int enabled;
 static int rails_cnt;
 static int psm_rails_cnt;
 static int ocr_rail_cnt;
