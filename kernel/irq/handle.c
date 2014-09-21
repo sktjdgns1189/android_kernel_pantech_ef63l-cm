@@ -173,7 +173,7 @@ handle_irq_event_percpu(struct irq_desc *desc, struct irqaction *action)
 	} while (action);
 
 	if (random & IRQF_SAMPLE_RANDOM)
-		add_interrupt_randomness(irq);
+		add_interrupt_randomness(irq, random);
 
 	if (!noirqdebug)
 		note_interrupt(irq, desc, retval);
