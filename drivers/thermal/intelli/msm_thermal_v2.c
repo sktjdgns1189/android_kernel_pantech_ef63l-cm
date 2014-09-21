@@ -45,7 +45,7 @@
 
 static struct msm_thermal_data msm_thermal_info;
 static struct delayed_work check_temp_work;
-static bool core_control_enabled;
+static bool core_control_enabled = true;
 static uint32_t cpus_offlined;
 static DEFINE_MUTEX(core_control_mutex);
 static uint32_t wakeup_ms;
@@ -1945,11 +1945,10 @@ int __devinit msm_thermal_init(struct msm_thermal_data *pdata)
 	if (num_possible_cpus() > 1)
 		register_cpu_notifier(&msm_thermal_cpu_notifier);
 
-	/* emulate default behavior */
-	disable_msm_thermal();
-	hotplug_init();
-	freq_mitigation_init();
-	enabled = 0;
+	/* enable by default */
+	enabled = 1;
+	schedule_delayed_work(&check_temp_work,
+		msecs_to_jiffies(msm_thermal_info.poll_ms));
 
 	return ret;
 }
