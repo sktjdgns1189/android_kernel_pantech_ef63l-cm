@@ -6,6 +6,14 @@
 #ifndef _LINUX_RANDOM_H
 #define _LINUX_RANDOM_H
 
+#ifndef u32
+# define u32 __u32
+#endif
+
+#ifndef u64
+# define u64 __u64
+#endif
+
 #include <linux/uapi_random.h>
 
 extern void add_device_randomness(const void *, unsigned int);
@@ -49,7 +57,7 @@ void prandom_bytes_state(struct rnd_state *state, void *buf, size_t nbytes);
  *
  * Returns: pseudo-random number in interval [0, ep_ro)
  */
-static inline u32 prandom_u32_max(u32 ep_ro)
+static __inline__ u32 prandom_u32_max(u32 ep_ro)
 {
 	return (u32)(((u64) prandom_u32() * ep_ro) >> 32);
 }
@@ -57,7 +65,7 @@ static inline u32 prandom_u32_max(u32 ep_ro)
 /*
  * Handle minimum values for seeds
  */
-static inline u32 __seed(u32 x, u32 m)
+static __inline__ u32 __seed(u32 x, u32 m)
 {
 	return (x < m) ? x + m : x;
 }
@@ -67,7 +75,7 @@ static inline u32 __seed(u32 x, u32 m)
  * @state: pointer to state structure to receive the seed.
  * @seed: arbitrary 64-bit value to use as a seed.
  */
-static inline void prandom_seed_state(struct rnd_state *state, u64 seed)
+static __inline__ void prandom_seed_state(struct rnd_state *state, u64 seed)
 {
 	u32 i = (seed >> 32) ^ (seed << 10) ^ seed;
 
@@ -80,34 +88,34 @@ static inline void prandom_seed_state(struct rnd_state *state, u64 seed)
 #ifdef CONFIG_ARCH_RANDOM
 # include <asm/archrandom.h>
 #else
-static inline int arch_get_random_long(unsigned long *v)
+static __inline__ int arch_get_random_long(unsigned long *v)
 {
 	return 0;
 }
-static inline int arch_get_random_int(unsigned int *v)
+static __inline__ int arch_get_random_int(unsigned int *v)
 {
 	return 0;
 }
-static inline int arch_has_random(void)
+static __inline__ int arch_has_random(void)
 {
 	return 0;
 }
-static inline int arch_get_random_seed_long(unsigned long *v)
+static __inline__ int arch_get_random_seed_long(unsigned long *v)
 {
 	return 0;
 }
-static inline int arch_get_random_seed_int(unsigned int *v)
+static __inline__ int arch_get_random_seed_int(unsigned int *v)
 {
 	return 0;
 }
-static inline int arch_has_random_seed(void)
+static __inline__ int arch_has_random_seed(void)
 {
 	return 0;
 }
 #endif
 
 /* Pseudo random number generator from numerical recipes. */
-static inline u32 next_pseudo_random32(u32 seed)
+static __inline__ u32 next_pseudo_random32(u32 seed)
 {
 	return seed * 1664525 + 1013904223;
 }
