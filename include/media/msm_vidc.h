@@ -60,7 +60,6 @@ int msm_vidc_enum_fmt(void *instance, struct v4l2_fmtdesc *f);
 int msm_vidc_s_fmt(void *instance, struct v4l2_format *f);
 int msm_vidc_g_fmt(void *instance, struct v4l2_format *f);
 int msm_vidc_s_ctrl(void *instance, struct v4l2_control *a);
-int msm_vidc_s_ext_ctrl(void *instance, struct v4l2_ext_controls *a);
 int msm_vidc_g_ctrl(void *instance, struct v4l2_control *a);
 int msm_vidc_reqbufs(void *instance, struct v4l2_requestbuffers *b);
 int msm_vidc_prepare_buf(void *instance, struct v4l2_buffer *b);
@@ -198,7 +197,6 @@ enum msm_vidc_extradata_type {
 	EXTRADATA_INDEX = 0x7F100002,
 	EXTRADATA_ASPECT_RATIO = 0x7F100003,
 	EXTRADATA_METADATA_FILLER = 0x7FE00002,
-	MSM_VIDC_EXTRADATA_METADATA_LTR = 0x7F100004,
 	EXTRADATA_METADATA_MBI = 0x7F100005,
 };
 enum msm_vidc_interlace_type {

@@ -45,9 +45,6 @@
 #define HAL_BUFFERFLAG_ENDOFSUBFRAME    0x00000400
 #define HAL_BUFFERFLAG_EOSEQ            0x00200000
 #define HAL_BUFFERFLAG_MBAFF            0x08000000
-/*Start : Qualcomm Local Patch - 20131226 */
-#define HAL_BUFFERFLAG_YUV_601_709_CSC_CLAMP   0x10000000
-/*End : Qualcomm Local Patch - 20131226 */
 #define HAL_BUFFERFLAG_DROP_FRAME       0x20000000
 
 
@@ -104,7 +101,6 @@ enum hal_extradata_id {
 	HAL_EXTRADATA_MPEG2_SEQDISP,
 	HAL_EXTRADATA_FRAME_QP,
 	HAL_EXTRADATA_FRAME_BITS_INFO,
-	HAL_EXTRADATA_LTR_INFO,
 	HAL_EXTRADATA_METADATA_MBI,
 };
 
@@ -185,12 +181,6 @@ enum hal_property {
 	HAL_PARAM_BUFFER_ALLOC_MODE,
 	HAL_PARAM_VDEC_FRAME_ASSEMBLY,
 	HAL_PARAM_VDEC_CONCEAL_COLOR,
-	HAL_PARAM_VENC_LTRMODE,
-	HAL_CONFIG_VENC_MARKLTRFRAME,
-	HAL_CONFIG_VENC_USELTRFRAME,
-	HAL_CONFIG_VENC_LTRPERIOD,
-	HAL_PARAM_VENC_HIER_P_NUM_FRAMES,
-	HAL_PARAM_VPE_COLOR_SPACE_CONVERSION,
 };
 
 enum hal_domain {
@@ -824,12 +814,6 @@ struct hal_h264_vui_timing_info {
 	u32 time_scale;
 };
 
-struct hal_vpe_color_space_conversion {
-	u32 csc_matrix[9];
-	u32 csc_bias[3];
-	u32 csc_limit[6];
-};
-
 enum vidc_resource_id {
 	VIDC_RESOURCE_OCMEM = 0x00000001,
 	VIDC_UNUSED_RESORUCE = 0x10000000,
@@ -916,27 +900,6 @@ struct hal_buffer_alloc_mode {
 	enum buffer_mode_type buffer_mode;
 };
 
-enum ltr_mode {
-	HAL_LTR_MODE_DISABLE,
-	HAL_LTR_MODE_MANUAL,
-	HAL_LTR_MODE_PERIODIC,
-};
-
-struct hal_ltrmode {
-	enum ltr_mode ltrmode;
-	u32 ltrcount;
-	u32 trustmode;
-};
-
-struct hal_ltruse {
-	u32 refltr;
-	u32 useconstrnt;
-	u32 frames;
-};
-
-struct hal_ltrmark {
-	u32 markframe;
-};
 /* HAL Response */
 
 enum command_response {
@@ -1073,8 +1036,6 @@ struct vidc_hal_session_init_done {
 	struct hal_capability_supported scale_x;
 	struct hal_capability_supported scale_y;
 	struct hal_capability_supported bitrate;
-	struct hal_capability_supported ltr_count;
-	struct hal_capability_supported hier_p;
 	struct hal_uncompressed_format_supported uncomp_format;
 	struct hal_interlace_format_supported HAL_format;
 	struct hal_nal_stream_format_supported nal_stream_format;

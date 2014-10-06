@@ -37,7 +37,6 @@
 #define B_FRAME_QP 30
 #define MAX_INTRA_REFRESH_MBS 300
 #define MAX_NUM_B_FRAMES 4
-#define MAX_LTR_FRAME_COUNT 10
 
 #define L_MODE V4L2_MPEG_VIDEO_H264_LOOP_FILTER_MODE_DISABLED_AT_SLICE_BOUNDARY
 #define CODING V4L2_MPEG_VIDEO_MPEG4_PROFILE_ADVANCED_CODING_EFFICIENCY
@@ -138,8 +137,7 @@ enum msm_venc_ctrl_cluster {
 	MSM_VENC_CTRL_CLUSTER_TIMING = 1 << 9,
 	MSM_VENC_CTRL_CLUSTER_VP8_PROFILE_LEVEL = 1 << 10,
 	MSM_VENC_CTRL_CLUSTER_DEINTERLACE = 1 << 11,
-	MSM_VENC_CTRL_CLUSTER_USE_LTRFRAME = 1 << 12,
-	MSM_VENC_CTRL_CLUSTER_MAX = 1 << 13,
+	MSM_VENC_CTRL_CLUSTER_MAX = 1 << 12,
 };
 
 static struct msm_vidc_ctrl msm_venc_ctrls[] = {
@@ -696,7 +694,6 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 			(1 << V4L2_MPEG_VIDC_INDEX_EXTRADATA_INPUT_CROP) |
 			(1 << V4L2_MPEG_VIDC_INDEX_EXTRADATA_DIGITAL_ZOOM) |
 			(1 << V4L2_MPEG_VIDC_INDEX_EXTRADATA_ASPECT_RATIO) |
-			(1 << V4L2_MPEG_VIDC_EXTRADATA_LTR) |
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_METADATA_MBI)
 			),
 		.qmenu = mpeg_video_vidc_extradata,
@@ -755,61 +752,6 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.default_value = V4L2_CID_MPEG_VIDC_VIDEO_DEINTERLACE_DISABLED,
 		.step = 1,
 		.cluster = MSM_VENC_CTRL_CLUSTER_DEINTERLACE,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDC_VIDEO_USELTRFRAME,
-		.name = "H264 Use LTR",
-		.type = V4L2_CTRL_TYPE_BUTTON,
-		.minimum = 0,
-		.maximum = (MAX_LTR_FRAME_COUNT - 1),
-		.default_value = 0,
-		.step = 1,
-		.qmenu = NULL,
-		.cluster = 0,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDC_VIDEO_LTRCOUNT,
-		.name = "Ltr Count",
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.minimum = 0,
-		.maximum = MAX_LTR_FRAME_COUNT,
-		.default_value = 0,
-		.step = 1,
-		.qmenu = NULL,
-		.cluster = MSM_VENC_CTRL_CLUSTER_USE_LTRFRAME,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDC_VIDEO_LTRMODE,
-		.name = "Ltr Mode",
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.minimum = V4L2_MPEG_VIDC_VIDEO_LTR_MODE_DISABLE,
-		.maximum = V4L2_MPEG_VIDC_VIDEO_LTR_MODE_PERIODIC,
-		.default_value = V4L2_MPEG_VIDC_VIDEO_LTR_MODE_DISABLE,
-		.step = 1,
-		.qmenu = NULL,
-		.cluster = MSM_VENC_CTRL_CLUSTER_USE_LTRFRAME,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDC_VIDEO_MARKLTRFRAME,
-		.name = "H264 Mark LTR",
-		.type = V4L2_CTRL_TYPE_BUTTON,
-		.minimum = 0,
-		.maximum = (MAX_LTR_FRAME_COUNT - 1),
-		.default_value = 0,
-		.step = 1,
-		.qmenu = NULL,
-		.cluster = 0,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDC_VIDEO_HIER_P_NUM_LAYERS,
-		.name = "Set Hier P num layers",
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.minimum = 0,
-		.maximum = 3,
-		.default_value = 0,
-		.step = 1,
-		.qmenu = NULL,
-		.cluster = 0,
 	}
 };
 
@@ -1359,9 +1301,6 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	struct v4l2_ctrl *temp_ctrl = NULL;
 	struct hfi_device *hdev;
 	struct hal_extradata_enable extra;
-	struct hal_ltruse useltr;
-	struct hal_ltrmark markltr;
-	u32 hier_p_layers;
 
 	if (!inst || !inst->core || !inst->core->device) {
 		dprintk(VIDC_ERR, "%s invalid parameters", __func__);
@@ -2079,33 +2018,7 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		pdata = &enable;
 		break;
 	}
-	case V4L2_CID_MPEG_VIDC_VIDEO_USELTRFRAME:
-		property_id = HAL_CONFIG_VENC_USELTRFRAME;
-		useltr.refltr = ctrl->val;
-		useltr.useconstrnt = false;
-		useltr.frames = 0;
-		pdata = &useltr;
-		break;
-	case V4L2_CID_MPEG_VIDC_VIDEO_MARKLTRFRAME:
-		property_id = HAL_CONFIG_VENC_MARKLTRFRAME;
-		markltr.markframe = ctrl->val;
-		pdata = &markltr;
-		break;
-	case V4L2_CID_MPEG_VIDC_VIDEO_HIER_P_NUM_LAYERS:
-		property_id = HAL_PARAM_VENC_HIER_P_NUM_FRAMES;
-		hier_p_layers = ctrl->val;
-		if (hier_p_layers > (inst->capability.hier_p.max - 1)) {
-			dprintk(VIDC_ERR,
-				"Error setting hier p num layers = %d max supported by f/w = %d\n",
-				hier_p_layers,
-				inst->capability.hier_p.max - 1);
-			rc = -ENOTSUPP;
-			break;
-		}
-		pdata = &hier_p_layers;
-		break;
 	default:
-		dprintk(VIDC_ERR, "Unsupported index: %x\n", ctrl->id);
 		rc = -ENOTSUPP;
 		break;
 	}
@@ -2119,89 +2032,6 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 				(void *)inst->session, property_id, pdata);
 	}
 
-	return rc;
-}
-
-static struct v4l2_ctrl *get_cluster_from_id(int id)
-{
-	int c;
-	for (c = 0; c < ARRAY_SIZE(msm_venc_ctrls); ++c)
-		if (msm_venc_ctrls[c].id == id)
-			return (struct v4l2_ctrl *)msm_venc_ctrls[c].priv;
-	return NULL;
-}
-
-static int try_set_ext_ctrl(struct msm_vidc_inst *inst,
-	struct v4l2_ext_controls *ctrl)
-{
-	int rc = 0, i;
-	struct v4l2_ext_control *control;
-	struct hfi_device *hdev;
-	struct hal_ltrmode ltrmode;
-	struct v4l2_ctrl *cluster;
-	u32 property_id = 0;
-	void *pdata = NULL;
-	struct msm_vidc_core_capability *cap = NULL;
-
-	if (!inst || !inst->core || !inst->core->device || !ctrl) {
-		dprintk(VIDC_ERR, "%s invalid parameters\n", __func__);
-		return -EINVAL;
-	}
-
-	cluster = get_cluster_from_id(ctrl->controls[0].id);
-
-	if (!cluster) {
-		dprintk(VIDC_ERR, "Invalid Ctrl returned for id: %x\n",
-			ctrl->controls[0].id);
-		return -EINVAL;
-	}
-
-	hdev = inst->core->device;
-	cap = &inst->capability;
-
-	control = ctrl->controls;
-	for (i = 0; i < ctrl->count; i++) {
-		switch (control[i].id) {
-		case V4L2_CID_MPEG_VIDC_VIDEO_LTRMODE:
-			ltrmode.ltrmode = control[i].value;
-			ltrmode.trustmode = 1;
-			property_id = HAL_PARAM_VENC_LTRMODE;
-			pdata = &ltrmode;
-			break;
-		case V4L2_CID_MPEG_VIDC_VIDEO_LTRCOUNT:
-			ltrmode.ltrcount =  control[i].value;
-			if (ltrmode.ltrcount > cap->ltr_count.max) {
-				dprintk(VIDC_ERR,
-						"Invalid LTR count %d. Supported max: %d\n",
-						ltrmode.ltrcount,
-						cap->ltr_count.max);
-				/*
-				 * FIXME: Return an error (-EINVALID)
-				 * here once VP8 supports LTR count
-				 * capability
-				 */
-				ltrmode.ltrcount = 1;
-			}
-			ltrmode.trustmode = 1;
-			property_id = HAL_PARAM_VENC_LTRMODE;
-			pdata = &ltrmode;
-			break;
-		default:
-			dprintk(VIDC_ERR, "Invalid id set: %d\n",
-					control[i].id);
-			rc = -ENOTSUPP;
-			break;
-		}
-		if (rc)
-			break;
-	}
-
-	if (!rc && property_id) {
-		dprintk(VIDC_DBG, "Control: HAL property=%x\n", property_id);
-		rc = call_hfi_op(hdev, session_set_property,
-				(void *)inst->session, property_id, pdata);
-	}
-	pr_err("Returning from %s\n", __func__);
 	return rc;
 }
 
@@ -2288,22 +2118,6 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_control *ctrl)
 int msm_venc_g_ctrl(struct msm_vidc_inst *inst, struct v4l2_control *ctrl)
 {
 	return v4l2_g_ctrl(&inst->ctrl_handler, ctrl);
-}
-
-int msm_venc_s_ext_ctrl(struct msm_vidc_inst *inst,
-	struct v4l2_ext_controls *ctrl)
-{
-	int rc = 0;
-	if (ctrl->ctrl_class != V4L2_CTRL_CLASS_MPEG) {
-		dprintk(VIDC_ERR, "Invalid Class set for extended control\n");
-		return -EINVAL;
-	}
-	rc = try_set_ext_ctrl(inst, ctrl);
-	if (rc) {
-		dprintk(VIDC_ERR, "Error setting extended control\n");
-		return rc;
-	}
-	return rc;
 }
 
 int msm_venc_cmd(struct msm_vidc_inst *inst, struct v4l2_encoder_cmd *enc)
