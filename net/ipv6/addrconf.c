@@ -91,8 +91,13 @@
 #include <linux/seq_file.h>
 #include <linux/export.h>
 
+#ifdef CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX
+/* Set to 3 to get tracing... */
+#define ACONF_DEBUG 3
+#else
 /* Set to 3 to get tracing... */
 #define ACONF_DEBUG 2
+#endif /* CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX */
 
 #if ACONF_DEBUG >= 3
 #define ADBG(x) printk x
@@ -277,6 +282,14 @@ static void addrconf_mod_timer(struct inet6_ifaddr *ifp,
 	switch (what) {
 	case AC_DAD:
 		ifp->timer.function = addrconf_dad_timer;
+
+#ifdef CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT
+       if(strncmp( ifp->idev->dev->name, "rmnet", 5) == 0 )
+       {
+         printk(KERN_CRIT "addrconf_mod_timer() DAD timer start when %lu to 50 ms\n", when);
+         when = 5;
+	   }
+#endif       
 		break;
 	case AC_RS:
 		ifp->timer.function = addrconf_rs_timer;
@@ -656,6 +669,16 @@ ipv6_add_addr(struct inet6_dev *idev, const struct in6_addr *addr, int pfxlen,
 	ifa->scope = scope;
 	ifa->prefix_len = pfxlen;
 	ifa->flags = flags | IFA_F_TENTATIVE;
+  
+#ifdef CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT
+   if(strncmp( idev->dev->name, "rmnet",5) == 0 
+    && !(addr_type & IPV6_ADDR_LINKLOCAL) )
+   {
+     printk(KERN_CRIT "ipv6_add_addr() set mask NODAD\n");
+     ifa->flags |= IFA_F_NODAD; 
+   }
+#endif   
+   
 	ifa->cstamp = ifa->tstamp = jiffies;
 
 	ifa->rt = rt;
@@ -669,7 +692,9 @@ ipv6_add_addr(struct inet6_dev *idev, const struct in6_addr *addr, int pfxlen,
 	hash = ipv6_addr_hash(addr);
 
 	hlist_add_head_rcu(&ifa->addr_lst, &inet6_addr_lst[hash]);
+#ifndef CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX  
 	spin_unlock(&addrconf_hash_lock);
+#endif /* CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX */
 
 	write_lock(&idev->lock);
 	/* Add to inet6_dev unicast addr list. */
@@ -684,6 +709,9 @@ ipv6_add_addr(struct inet6_dev *idev, const struct in6_addr *addr, int pfxlen,
 
 	in6_ifa_hold(ifa);
 	write_unlock(&idev->lock);
+#ifdef CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX
+	spin_unlock(&addrconf_hash_lock);
+#endif /* CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX */
 out2:
 	rcu_read_unlock_bh();
 
@@ -720,7 +748,9 @@ static void ipv6_del_addr(struct inet6_ifaddr *ifp)
 
 	spin_lock_bh(&addrconf_hash_lock);
 	hlist_del_init_rcu(&ifp->addr_lst);
+#ifndef CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX  
 	spin_unlock_bh(&addrconf_hash_lock);
+#endif /* CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX */
 
 	write_lock_bh(&idev->lock);
 #ifdef CONFIG_IPV6_PRIVACY
@@ -773,7 +803,9 @@ static void ipv6_del_addr(struct inet6_ifaddr *ifp)
 		}
 	}
 	write_unlock_bh(&idev->lock);
-
+#ifdef CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX
+	spin_unlock_bh(&addrconf_hash_lock);
+#endif /* CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX */
 	addrconf_del_timer(ifp);
 
 	ipv6_ifa_notify(RTM_DELADDR, ifp);
@@ -2788,13 +2820,17 @@ static int addrconf_ifdown(struct net_device *dev, int how)
 		snmp6_unregister_dev(idev);
 
 	}
+#ifdef CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX
+	spin_lock_bh(&addrconf_hash_lock);
+#endif /* CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX */
 
 	/* Step 2: clear hash table */
 	for (i = 0; i < IN6_ADDR_HSIZE; i++) {
 		struct hlist_head *h = &inet6_addr_lst[i];
 		struct hlist_node *n;
-
+#ifndef CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX
 		spin_lock_bh(&addrconf_hash_lock);
+#endif /* CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX */
 	restart:
 		hlist_for_each_entry_rcu(ifa, n, h, addr_lst) {
 			if (ifa->idev == idev) {
@@ -2803,7 +2839,9 @@ static int addrconf_ifdown(struct net_device *dev, int how)
 				goto restart;
 			}
 		}
+#ifndef CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX    
 		spin_unlock_bh(&addrconf_hash_lock);
+#endif /* CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX */
 	}
 
 	write_lock_bh(&idev->lock);
@@ -2858,6 +2896,9 @@ static int addrconf_ifdown(struct net_device *dev, int how)
 	}
 
 	write_unlock_bh(&idev->lock);
+#ifdef CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX
+	spin_unlock_bh(&addrconf_hash_lock);
+#endif /* CONFIG_LGU_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX */
 
 	/* Step 5: Discard multicast list */
 	if (how)

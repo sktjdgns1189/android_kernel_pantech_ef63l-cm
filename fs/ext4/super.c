@@ -43,7 +43,6 @@
 
 #include <linux/kthread.h>
 #include <linux/freezer.h>
-#include <linux/ratelimit.h>
 
 #include "ext4.h"
 #include "ext4_extents.h"
@@ -54,6 +53,12 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/ext4.h>
+
+#ifdef CONFIG_PANTECH_FS_AUTO_REPAIR
+#include "../../arch/arm/mach-msm/include/mach/pantech_sys.h"
+#endif /* CONFIG_PANTECH_FS_AUTO_REPAIR */
+
+
 
 static struct proc_dir_entry *ext4_proc_root;
 static struct kset *ext4_kset;
@@ -480,6 +485,30 @@ static void ext4_handle_error(struct super_block *sb)
 	if (test_opt(sb, ERRORS_RO)) {
 		ext4_msg(sb, KERN_CRIT, "Remounting filesystem read-only");
 		sb->s_flags |= MS_RDONLY;
+#ifdef CONFIG_PANTECH_FS_AUTO_REPAIR 
+		/* added for userdata partition auti repair */
+#if defined(CONFIG_MACH_MSM8974_EF63S) || defined(CONFIG_MACH_MSM8974_EF63K) || defined(CONFIG_MACH_MSM8974_EF63L)
+		if(strcmp(sb->s_id, "mmcblk0p29")==0)
+#else
+		if(strcmp(sb->s_id, "mmcblk0p27")==0)
+#endif
+		{
+			pantech_sys_reset_reason_set(SYS_RESET_REASON_USERDATA_FS); 
+			panic("EXT4-fs (device %s) ERRORS_RO : panic forced after error\n",
+			sb->s_id);
+		}
+
+#if defined(CONFIG_MACH_MSM8974_EF63S) || defined(CONFIG_MACH_MSM8974_EF63K) || defined(CONFIG_MACH_MSM8974_EF63L) || defined(CONFIG_MACH_MSM8974_EF65S) || defined(CONFIG_MACH_MSM8974_EF69K) || defined(CONFIG_MACH_MSM8974_EF69L)
+#if 1 //lsi@ls1 : run e2fsck for secure parition (fs error)
+		if(strcmp(sb->s_id, "mmcblk0p28")==0)
+		{
+			pantech_sys_reset_reason_set(SYS_RESET_REASON_SECURE_FS);
+			panic("EXT4-fs (device %s) ERRORS_RO : panic forced after error\n",
+			sb->s_id);
+		}
+#endif //lsi@ls1 : run e2fsck for secure parition (fs error)
+#endif
+#endif
 	}
 	if (test_opt(sb, ERRORS_PANIC))
 		panic("EXT4-fs (device %s): panic forced after error\n",
@@ -655,6 +684,28 @@ void __ext4_abort(struct super_block *sb, const char *function,
 		if (EXT4_SB(sb)->s_journal)
 			jbd2_journal_abort(EXT4_SB(sb)->s_journal, -EIO);
 		save_error_info(sb, function, line);
+#ifdef CONFIG_PANTECH_FS_AUTO_REPAIR 
+#if defined(CONFIG_MACH_MSM8974_EF63S) || defined(CONFIG_MACH_MSM8974_EF63K) || defined(CONFIG_MACH_MSM8974_EF63L)
+		if(strcmp(sb->s_id, "mmcblk0p29")==0)
+#else
+		if(strcmp(sb->s_id, "mmcblk0p27")==0)
+#endif
+		{
+			pantech_sys_reset_reason_set(SYS_RESET_REASON_USERDATA_FS); 
+			panic("EXT4-fs (device %s) ERRORS_RO : panic forced after error\n",
+			sb->s_id);
+		}
+#if 1//lsi@ls1 : run e2fsck for secure parition (fs error)
+#if defined(CONFIG_MACH_MSM8974_EF63S) || defined(CONFIG_MACH_MSM8974_EF63K) || defined(CONFIG_MACH_MSM8974_EF63L) || defined(CONFIG_MACH_MSM8974_EF65S) || defined(CONFIG_MACH_MSM8974_EF69K) || defined(CONFIG_MACH_MSM8974_EF69L)
+		if(strcmp(sb->s_id, "mmcblk0p28")==0)
+		{
+			pantech_sys_reset_reason_set(SYS_RESET_REASON_SECURE_FS); 
+			panic("EXT4-fs (device %s) ERRORS_RO : panic forced after error\n",
+			sb->s_id);
+		}
+#endif
+#endif //lsi@ls1 : run e2fsck for secure parition (fs error)
+#endif
 	}
 	if (test_opt(sb, ERRORS_PANIC))
 		panic("EXT4-fs panic from previous error\n");
@@ -668,7 +719,7 @@ void ext4_msg(struct super_block *sb, const char *prefix, const char *fmt, ...)
 	va_start(args, fmt);
 	vaf.fmt = fmt;
 	vaf.va = &args;
-	printk_ratelimited("%sEXT4-fs (%s): %pV\n", prefix, sb->s_id, &vaf);
+	printk("%sEXT4-fs (%s): %pV\n", prefix, sb->s_id, &vaf);
 	va_end(args);
 }
 

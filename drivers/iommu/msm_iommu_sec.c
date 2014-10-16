@@ -61,12 +61,6 @@
 
 static struct iommu_access_ops *iommu_access_ops;
 
-static const struct of_device_id msm_smmu_list[] = {
-	{ .compatible = "qcom,msm-smmu-v1", },
-	{ .compatible = "qcom,msm-smmu-v2", },
-	{ }
-};
-
 struct msm_scm_paddr_list {
 	unsigned int list;
 	unsigned int list_size;
@@ -302,9 +296,8 @@ static int msm_iommu_sec_ptbl_init(void)
 	int ret, ptbl_ret = 0;
 	int version;
 
-	for_each_matching_node(np, msm_smmu_list)
-		if (of_find_property(np, "qcom,iommu-secure-id", NULL) &&
-				of_device_is_available(np))
+	for_each_compatible_node(np, NULL, "qcom,msm-smmu-v1")
+		if (of_find_property(np, "qcom,iommu-secure-id", NULL))
 			break;
 
 	if (!np)

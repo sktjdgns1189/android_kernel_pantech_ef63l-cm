@@ -470,6 +470,11 @@ struct input_keymap_entry {
 #define KEY_RFKILL		247	/* Key that controls all radios */
 
 #define KEY_MICMUTE		248	/* Mute / unmute the microphone */
+// LS2 p13106. Add Key information.
+#define KEY_DOME        251
+#define KEY_VT_CALL  252
+// LS2 p13106. Add Key information.
+
 
 /* Code 255 is reserved for special needs of AT keyboard driver */
 
@@ -850,7 +855,6 @@ struct input_keymap_entry {
 #define SW_HPHL_OVERCURRENT    0x0e  /* set = over current on left hph */
 #define SW_HPHR_OVERCURRENT    0x0f  /* set = over current on right hph */
 #define SW_UNSUPPORT_INSERT	0x10  /* set = unsupported device inserted */
-#define SW_MICROPHONE2_INSERT   0x11  /* set = inserted */
 #define SW_MAX			0x20
 #define SW_CNT			(SW_MAX+1)
 

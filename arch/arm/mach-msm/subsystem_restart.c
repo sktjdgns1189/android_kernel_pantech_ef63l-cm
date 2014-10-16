@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -41,6 +41,30 @@
 #include <mach/subsystem_restart.h>
 
 #include "smd_private.h"
+
+#ifdef CONFIG_PANTECH_ERR_CRASH_LOGGING
+#include <mach/pantech_sys.h>
+
+// p15060
+#include <linux/syscalls.h>
+#include <linux/kmod.h>
+#include <linux/workqueue.h>
+#include "sky_rawdata.h"
+#include "pantech_ssrsystem.h"
+#endif
+
+// p15060
+#ifdef CONFIG_PANTECH_ERR_CRASH_LOGGING
+extern int pantech_is_usbdump_enabled(void);
+static int start_ssr_app = 0;
+module_param( start_ssr_app, int, 0660 );
+
+static int modem_ssr_enable = 1;
+int modem_ssr_dump_enable = 1;
+
+int rawdata_read_func(unsigned int offset, unsigned int read_size, char* read_buf);
+void check_ssr_setting_func( void );
+#endif
 
 static int enable_debug;
 module_param(enable_debug, int, S_IRUGO | S_IWUSR);
@@ -466,20 +490,14 @@ static void subsystem_powerup(struct subsys_device *dev, void *data)
 
 	pr_info("[%p]: Powering up %s\n", current, name);
 	init_completion(&dev->err_ready);
-
-	if (dev->desc->powerup(dev->desc) < 0) {
-		notify_each_subsys_device(&dev, 1, SUBSYS_POWERUP_FAILURE,
-								NULL);
+	if (dev->desc->powerup(dev->desc) < 0)
 		panic("[%p]: Powerup error: %s!", current, name);
-	}
 
 	ret = wait_for_err_ready(dev);
-	if (ret) {
-		notify_each_subsys_device(&dev, 1, SUBSYS_POWERUP_FAILURE,
-								NULL);
+	if (ret)
 		panic("[%p]: Timed out waiting for error ready: %s!",
 			current, name);
-	}
+
 	subsys_set_state(dev, SUBSYS_ONLINE);
 }
 
@@ -507,11 +525,8 @@ static int subsys_start(struct subsys_device *subsys)
 
 	init_completion(&subsys->err_ready);
 	ret = subsys->desc->start(subsys->desc);
-	if (ret){
-		notify_each_subsys_device(&subsys, 1, SUBSYS_POWERUP_FAILURE,
-									NULL);
+	if (ret)
 		return ret;
-	}
 
 	if (subsys->desc->is_not_loadable) {
 		subsys_set_state(subsys, SUBSYS_ONLINE);
@@ -519,14 +534,12 @@ static int subsys_start(struct subsys_device *subsys)
 	}
 
 	ret = wait_for_err_ready(subsys);
-	if (ret) {
+	if (ret)
 		/* pil-boot succeeded but we need to shutdown
 		 * the device because error ready timed out.
 		 */
-		notify_each_subsys_device(&subsys, 1, SUBSYS_POWERUP_FAILURE,
-									NULL);
 		subsys->desc->stop(subsys->desc);
-	} else
+	else
 		subsys_set_state(subsys, SUBSYS_ONLINE);
 
 	return ret;
@@ -656,6 +669,37 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	unsigned count;
 	unsigned long flags;
 
+// p15060
+#ifdef CONFIG_PANTECH_ERR_CRASH_LOGGING
+    int i;
+    int maxcount = 0;
+
+    if( ( !strncmp(desc->name, "modem", 5) ||
+          !strncmp(desc->name, "wcnss", 5) || !strncmp(desc->name, "riva", 4) ) )
+    {
+        if( 1 == modem_ssr_dump_enable )
+        {
+            maxcount = 60;
+        }
+        else
+        {
+            maxcount = 10;
+        }
+
+        for( i = 0; i < maxcount; i++ )
+        {
+            if( 1 == start_ssr_app )
+            {
+                pr_info( "subsystem_ramdump excuted.\n" );
+                break;
+            }
+            msleep( 200 );
+        }
+    }
+
+    msleep( 1000 );
+#endif
+
 	/*
 	 * It's OK to not take the registration lock at this point.
 	 * This is because the subsystem list inside the relevant
@@ -736,11 +780,223 @@ static void __subsystem_restart_dev(struct subsys_device *dev)
 			wake_lock(&dev->wake_lock);
 			queue_work(ssr_wq, &dev->work);
 		} else {
+            pr_info( "[subsystem_restart] subsys-restart: Resetting the SoC - %s crashed.\n", name );
 			panic("Subsystem %s crashed during SSR!", name);
 		}
 	}
 	spin_unlock_irqrestore(&track->s_lock, flags);
 }
+
+// p15060
+#ifdef CONFIG_PANTECH_ERR_CRASH_LOGGING
+void excute_ssr_app( struct work_struct *_work )
+{
+    char *argv[3] = { NULL, NULL, NULL };
+    char *envp[4] = { NULL, NULL, NULL, NULL };
+ 
+    argv[0] = "/system/bin/subsystem_ramdump";
+    argv[1] = "1";
+
+    envp[0] = "HOME=/";
+    envp[1] = "TERM=vt100";
+    envp[2] = "PATH=/system/bin";
+ 
+    call_usermodehelper( argv[0], argv, envp, UMH_WAIT_EXEC );
+}
+struct excute_work {
+    struct work_struct work;
+};
+struct excute_work *work;
+
+char ssr_reason[16];
+void excute_ssr_notification( struct work_struct *_work )
+{
+    char reason[16];
+    char *argv[4] = { NULL, NULL, reason, NULL };
+    char *envp[4] = { NULL, NULL, NULL, NULL };
+ 
+    argv[0] = "/system/bin/setprop";
+    argv[1] = "ssr.noti.start";
+//    argv[2] = "1";
+
+    memset( argv[2], 0, sizeof(reason) );
+    strcpy( argv[2], ssr_reason );
+
+    envp[0] = "HOME=/";
+    envp[1] = "TERM=vt100";
+    envp[2] = "PATH=/system/bin";
+ 
+    call_usermodehelper( argv[0], argv, envp, UMH_WAIT_EXEC );
+}
+struct excute_work *ssr_noti_work;
+
+int rawdata_read_func(unsigned int offset, unsigned int read_size, char* read_buf)
+{
+    struct file *rawdata_filp;
+    mm_segment_t oldfs;
+    int rc;
+
+    oldfs = get_fs();
+    set_fs(KERNEL_DS);
+    rawdata_filp = filp_open("/dev/block/mmcblk0p11", O_RDONLY | O_SYNC, 0);
+    if( IS_ERR(rawdata_filp) )
+    {
+        set_fs(oldfs);
+        pr_err("%s: filp_open error\n",__func__);
+        return -1;
+    }
+    set_fs(oldfs);
+    pr_info("%s: file open OK\n", __func__);
+    
+    rawdata_filp->f_pos = offset;
+    if(((rawdata_filp->f_flags & O_ACCMODE) & O_RDONLY) != 0)
+    {
+        pr_err("%s: rawdata read - permission denied!\n", __func__);
+        filp_close(rawdata_filp, NULL);
+        return -1;
+    }
+    
+    oldfs = get_fs();
+    set_fs(KERNEL_DS);
+    rc = rawdata_filp->f_op->read(rawdata_filp, read_buf, read_size, &rawdata_filp->f_pos);
+    if (rc < 0) 
+    {
+        set_fs(oldfs);
+        pr_err("%s: read fail from rawdata = %d \n",__func__,rc);
+        filp_close(rawdata_filp, NULL);
+        return -1;
+    }
+    set_fs(oldfs);
+    filp_close(rawdata_filp, NULL);
+    
+    return 0;
+}
+
+void check_ssr_setting_func( void )
+{
+    unsigned char backup_buffer[SECTOR_SIZE];
+    sky_ssr_info_type *ssrinfo = NULL;
+    
+    memset( backup_buffer, 0, sizeof(backup_buffer) );
+    if( rawdata_read_func(SSR_SETTING_BACKUP_START, sizeof(backup_buffer), backup_buffer) >= 0 )
+    {
+        ssrinfo = (sky_ssr_info_type *)backup_buffer;
+
+        if( ssrinfo->ssr_info_start_magic_num != SSR_INFO_START_MAGIC_NUM ||
+            ssrinfo->ssr_info_end_magic_num != SSR_INFO_END_MAGIC_NUM     )
+        {
+            pr_err( "ssr info struct was broken." );
+            return;
+        }
+
+        if( SSR_SET_MODEM_CHECK( ssrinfo ) )
+        {
+            modem_ssr_enable = 0;
+            pr_info( "Modem SSR disable.\n" );
+        }
+        else
+        {
+            modem_ssr_enable = 1;
+            pr_info( "Modem SSR enable.\n" );
+        }
+        
+        if( SSR_SET_MODEM_DUMP_CHECK( ssrinfo ) )
+        {
+            modem_ssr_dump_enable = 1;
+            pr_info( "Modem SSR dump enabled.\n" );
+        }
+        else
+        {
+            modem_ssr_dump_enable = 0;
+            pr_info( "Modem SSR dump disabled.\n" );
+        }
+    }
+    else
+    {
+        pr_err( "Modem SSR setting read fail.\n" );
+    }
+}
+
+void ssr_subsys_coupled_action( const char *name )
+{
+    if( NULL == name )
+    {
+     	pr_err( "ssr_app_action() fail. subsystem name is NULL.\n" );
+        return;
+    }
+
+    memset( ssr_reason, 0, sizeof(ssr_reason) );
+
+    if(!strncmp(name, "lpass", 5))
+    {
+        snprintf( ssr_reason, sizeof(ssr_reason), "0x%X", SYS_RESET_REASON_LPASS );
+    }
+    else if(!strncmp(name, "dsps", 4) || !strncmp(name, "adsp", 4))
+    {
+     	snprintf( ssr_reason, sizeof(ssr_reason), "0x%X", SYS_RESET_REASON_DSPS );
+    }
+    else if(!strncmp(name, "wcnss", 5) || !strncmp(name, "riva", 4))      // pronto                                                                                                                 
+    {
+        snprintf( ssr_reason, sizeof(ssr_reason), "0x%X", SYS_RESET_REASON_RIVA );
+    }
+    else if(!strncmp(name, "venus", 5))
+    {
+        snprintf( ssr_reason, sizeof(ssr_reason), "0x%X", SYS_RESET_REASON_VENUS );
+    }
+    else if(!strncmp(name, "modem", 5))
+    {
+#if defined(CONFIG_MACH_MSM8974_EF65S)
+        snprintf( ssr_reason, sizeof(ssr_reason), "0x%X", SYS_RESET_REASON_MODEM );
+#elif defined(CONFIG_MACH_MSM8974_EF69K) || defined(CONFIG_MACH_MSM8974_EF69L)
+        if( 1 == modem_ssr_enable )
+        {
+            snprintf( ssr_reason, sizeof(ssr_reason), "0x%X", SYS_RESET_REASON_MODEM );
+        }
+        else
+        {
+            snprintf( ssr_reason, sizeof(ssr_reason), "0x%XR", SYS_RESET_REASON_MODEM );
+        }
+#else
+        snprintf( ssr_reason, sizeof(ssr_reason), "0x%XR", SYS_RESET_REASON_MODEM );   // post fix : "R"
+#endif
+#if 0
+#if (1)     // Modem SSR Disable                                                                                                                                                                    
+        snprintf( ssr_reason, sizeof(ssr_reason), "0x%XR", SYS_RESET_REASON_MODEM );   // post fix : "R"                                                                                            
+#else
+#if defined(CONFIG_MACH_MSM8974_EF56S) ||                               \
+    defined(CONFIG_MACH_MSM8974_EF59S) || defined(CONFIG_MACH_MSM8974_EF59K) || defined(CONFIG_MACH_MSM8974_EF59L) || \
+    defined(CONFIG_MACH_MSM8974_EF60S) || defined(CONFIG_MACH_MSM8974_EF65S) || defined(CONFIG_MACH_MSM8974_EF61K) || defined(CONFIG_MACH_MSM8974_EF62L)
+        snprintf( ssr_reason, sizeof(ssr_reason), "0x%XR", SYS_RESET_REASON_MODEM );   // post fix : "R"                                                                                            
+#else
+        snprintf( ssr_reason, sizeof(ssr_reason), "0x%X", SYS_RESET_REASON_MODEM );
+#endif
+#endif
+#endif
+    }
+    else if(!strncmp(name, "external_modem", 14))
+    {
+        snprintf( ssr_reason, sizeof(ssr_reason), "0x%X", SYS_RESET_REASON_MDM );
+    }
+    else
+    {
+        snprintf( ssr_reason, sizeof(ssr_reason), "0x0" );
+    }
+
+    ssr_noti_work = kmalloc(sizeof *ssr_noti_work, GFP_KERNEL);
+    INIT_WORK(&ssr_noti_work->work, excute_ssr_notification);
+    schedule_work( &ssr_noti_work->work );
+
+    if( (!strncmp(name, "modem", 5) ||
+         !strncmp(name, "wcnss", 5) || !strncmp(name, "riva", 4) ) &&
+        ( 1 == modem_ssr_dump_enable ) )
+    {
+        work = kmalloc(sizeof *work, GFP_KERNEL);
+        INIT_WORK(&work->work, excute_ssr_app);
+        schedule_work( &work->work );
+    }
+
+}
+#endif
 
 int subsystem_restart_dev(struct subsys_device *dev)
 {
@@ -767,15 +1023,78 @@ int subsystem_restart_dev(struct subsys_device *dev)
 		return -EBUSY;
 	}
 
+// p15060
+#ifdef CONFIG_PANTECH_ERR_CRASH_LOGGING
+
+#if (!defined(CONFIG_MACH_MSM8974_EF65S)) &&   \
+    (!defined(CONFIG_MACH_MSM8974_EF69K)) && (!defined(CONFIG_MACH_MSM8974_EF69L))
+    if( !strncmp(name, "modem", 5) )
+    {
+        pr_info( "dev->restart_level = RESET_SOC\n" );
+        dev->restart_level = RESET_SOC;
+    }
+#endif
+
+    if( !strncmp(name, "wcnss", 5) || !strncmp(name, "riva", 4) )
+    {
+#if defined(CONFIG_MACH_MSM8974_EF69K) || defined(CONFIG_MACH_MSM8974_EF69L)
+        if( 1 == modem_ssr_enable )
+#else
+        if( !pantech_is_usbdump_enabled() )
+#endif
+        {
+            pr_info( "dev->restart_level = RESET_SUBSYS_COUPLED\n" );
+            dev->restart_level = RESET_SUBSYS_COUPLED;
+            
+        }
+        else
+        {
+            pr_info( "dev->restart_level = RESET_SOC\n" );
+            dev->restart_level = RESET_SOC;
+        }
+    }
+#endif     // CONFIG_PANTECH_ERR_CRASH_LOGGING
+
 	pr_info("Restart sequence requested for %s, restart_level = %s.\n",
 		name, restart_levels[dev->restart_level]);
 
 	switch (dev->restart_level) {
 
 	case RESET_SUBSYS_COUPLED:
+
+// p15060
+#ifdef CONFIG_PANTECH_ERR_CRASH_LOGGING
+        ssr_subsys_coupled_action( name );
+#endif
+
 		__subsystem_restart_dev(dev);
 		break;
 	case RESET_SOC:
+#ifdef CONFIG_PANTECH_ERR_CRASH_LOGGING
+		// p11219 TODO : check name and change.
+		if(!strncmp(name, "lpass", 5)) 
+		{
+			pantech_sys_reset_reason_set(SYS_RESET_REASON_LPASS);
+		}
+		else if(!strncmp(name, "dsps", 4) || !strncmp(name, "adsp", 4)) 
+		{
+			pantech_sys_reset_reason_set(SYS_RESET_REASON_DSPS);
+		}
+		else if(!strncmp(name, "wcnss", 5) || !strncmp(name, "riva", 4)) 
+		{
+			pantech_sys_reset_reason_set(SYS_RESET_REASON_RIVA);
+		}
+		else if(!strncmp(name, "modem", 5)) 
+		{
+			pantech_sys_reset_reason_set(SYS_RESET_REASON_MODEM);
+
+		}
+		else if(!strncmp(name, "external_modem", 14))
+		{
+			pantech_sys_reset_reason_set(SYS_RESET_REASON_MDM);
+		}
+#endif        
+
 		panic("subsys-restart: Resetting the SoC - %s crashed.", name);
 		break;
 	default:

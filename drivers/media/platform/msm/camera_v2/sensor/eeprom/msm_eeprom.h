@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -27,7 +27,34 @@ struct msm_eeprom_ctrl_t;
 #define DEFINE_MSM_MUTEX(mutexname) \
 	static struct mutex mutexname = __MUTEX_INITIALIZER(mutexname)
 
-#define PROPERTY_MAXSIZE 32
+#ifdef CONFIG_PANTECH_CAMERA
+#define CONFIG_PANTECH_CAMERA_READ_EEPROM 
+#define CONFIG_PANTECH_CAMERA_EEPROM_CHECKSUM
+#define CCI_READ_MAX 12
+
+#if defined(CONFIG_PANTECH_CAMERA_IMX135)
+#ifdef CONFIG_PANTECH_CAMERA_READ_EEPROM
+#define EEPROM_READ_BLOCK 256
+#endif
+#ifdef CONFIG_PANTECH_CAMERA_EEPROM_CHECKSUM
+#define EEPROM_READ_CHECKSUM_BYTE 2
+#define EEPROM_AWB_CHECKSUM_ADDR 0x06F8
+#define EEPROM_LSC_CHECKSUM_ADDR 0x06FA
+#define EEPROM_AF_CHECKSUM_ADDR 0x0700
+#endif
+#elif defined(CONFIG_PANTECH_CAMERA_IMX214)
+#ifdef CONFIG_PANTECH_CAMERA_READ_EEPROM
+ #define EEPROM_READ_BLOCK 64
+#endif
+#ifdef CONFIG_PANTECH_CAMERA_EEPROM_CHECKSUM
+#define EEPROM_READ_CHECKSUM_BYTE 4
+#define EEPROM_AWB_CHECKSUM_ADDR 0x7944
+#define EEPROM_LSC_CHECKSUM_ADDR 0x7946
+#define EEPROM_AF_CHECKSUM_ADDR 0x794C
+#define EEPROM_AWB_BLOCK_SIZE 6
+#endif
+#endif
+#endif
 
 struct msm_eeprom_ctrl_t {
 	struct platform_device *pdev;
@@ -40,10 +67,15 @@ struct msm_eeprom_ctrl_t {
 	enum cci_i2c_master_t cci_master;
 
 	struct msm_camera_i2c_client i2c_client;
-	struct msm_eeprom_memory_block_t cal_data;
+	uint32_t num_bytes;
+	uint8_t *memory_data;
 	uint8_t is_supported;
 	struct msm_eeprom_board_info *eboard_info;
 	uint32_t subdev_id;
+#ifdef CONFIG_PANTECH_CAMERA_READ_EEPROM
+	uint32_t set_block_bytes;
+	bool is_increase_slave_address;
+#endif 
 };
 
 #endif

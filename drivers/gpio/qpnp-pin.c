@@ -27,6 +27,12 @@
 #include <linux/export.h>
 #include <linux/qpnp/pin.h>
 
+#ifdef CONFIG_PANTECH_PMIC_BOARD_TYPE
+#include <linux/proc_fs.h>
+#include <linux/string.h>
+struct proc_dir_entry *board_type_info;
+#endif
+
 #define Q_REG_ADDR(q_spec, reg_index)	\
 		((q_spec)->offset + reg_index)
 
@@ -55,13 +61,11 @@
 #define Q_GPIO_SUBTYPE_GPIOC_8CH	0xD
 
 /* mpp peripheral type and subtype values */
-#define Q_MPP_TYPE				0x11
-#define Q_MPP_SUBTYPE_4CH_NO_ANA_OUT		0x3
-#define Q_MPP_SUBTYPE_ULT_4CH_NO_ANA_OUT	0x4
-#define Q_MPP_SUBTYPE_4CH_NO_SINK		0x5
-#define Q_MPP_SUBTYPE_ULT_4CH_NO_SINK		0x6
-#define Q_MPP_SUBTYPE_4CH_FULL_FUNC		0x7
-#define Q_MPP_SUBTYPE_8CH_FULL_FUNC		0xF
+#define Q_MPP_TYPE			0x11
+#define Q_MPP_SUBTYPE_4CH_NO_ANA_OUT	0x3
+#define Q_MPP_SUBTYPE_4CH_NO_SINK	0x5
+#define Q_MPP_SUBTYPE_4CH_FULL_FUNC	0x7
+#define Q_MPP_SUBTYPE_8CH_FULL_FUNC	0xF
 
 /* control register base address offsets */
 #define Q_REG_MODE_CTL			0x40
@@ -156,6 +160,11 @@ enum qpnp_pin_param_type {
 #define QPNP_PIN_AIN_ROUTE_INVALID	8
 #define QPNP_PIN_CS_OUT_INVALID		8
 
+
+#ifdef CONFIG_PANTECH_PMIC_BOARD_TYPE
+static int pm_gpio_base;
+#endif
+
 struct qpnp_pin_spec {
 	uint8_t slave;			/* 0-15 */
 	uint16_t offset;		/* 0-255 */
@@ -237,29 +246,22 @@ static inline void qpnp_chip_gpio_set_spec(struct qpnp_pin_chip *q_chip,
 static int qpnp_pin_check_config(enum qpnp_pin_param_type idx,
 				 struct qpnp_pin_spec *q_spec, uint32_t val)
 {
-	u8 subtype = q_spec->subtype;
-
 	switch (idx) {
 	case Q_PIN_CFG_MODE:
 		if (q_spec->type == Q_GPIO_TYPE &&
 		    val >= QPNP_PIN_GPIO_MODE_INVALID)
 				return -EINVAL;
-		else if (q_spec->type == Q_MPP_TYPE) {
-			if (val >= QPNP_PIN_MPP_MODE_INVALID)
+		else if (q_spec->type == Q_MPP_TYPE &&
+			 val >= QPNP_PIN_MPP_MODE_INVALID)
 				return -EINVAL;
-			if ((subtype == Q_MPP_SUBTYPE_ULT_4CH_NO_ANA_OUT ||
-			     subtype == Q_MPP_SUBTYPE_ULT_4CH_NO_SINK) &&
-			     (val == QPNP_PIN_MODE_BIDIR))
-				return -ENXIO;
-		}
 		break;
 	case Q_PIN_CFG_OUTPUT_TYPE:
 		if (q_spec->type != Q_GPIO_TYPE)
 			return -ENXIO;
 		if ((val == QPNP_PIN_OUT_BUF_OPEN_DRAIN_NMOS ||
 		    val == QPNP_PIN_OUT_BUF_OPEN_DRAIN_PMOS) &&
-		    (subtype == Q_GPIO_SUBTYPE_GPIOC_4CH ||
-		    (subtype == Q_GPIO_SUBTYPE_GPIOC_8CH)))
+		    (q_spec->subtype == Q_GPIO_SUBTYPE_GPIOC_4CH ||
+		    (q_spec->subtype == Q_GPIO_SUBTYPE_GPIOC_8CH)))
 			return -EINVAL;
 		else if (val >= QPNP_PIN_OUT_BUF_INVALID)
 			return -EINVAL;
@@ -272,28 +274,22 @@ static int qpnp_pin_check_config(enum qpnp_pin_param_type idx,
 		if (q_spec->type == Q_GPIO_TYPE &&
 		    val >= QPNP_PIN_GPIO_PULL_INVALID)
 			return -EINVAL;
-		if (q_spec->type == Q_MPP_TYPE) {
-			if (val >= QPNP_PIN_MPP_PULL_INVALID)
-				return -EINVAL;
-			if (subtype == Q_MPP_SUBTYPE_ULT_4CH_NO_ANA_OUT ||
-			    subtype == Q_MPP_SUBTYPE_ULT_4CH_NO_SINK)
-				return -ENXIO;
-		}
+		if (q_spec->type == Q_MPP_TYPE &&
+		    val >= QPNP_PIN_MPP_PULL_INVALID)
+			return -EINVAL;
 		break;
 	case Q_PIN_CFG_VIN_SEL:
 		if (val >= QPNP_PIN_VIN_8CH_INVALID)
 			return -EINVAL;
 		else if (val >= QPNP_PIN_VIN_4CH_INVALID) {
 			if (q_spec->type == Q_GPIO_TYPE &&
-			   (subtype == Q_GPIO_SUBTYPE_GPIO_4CH ||
-			    subtype == Q_GPIO_SUBTYPE_GPIOC_4CH))
+			   (q_spec->subtype == Q_GPIO_SUBTYPE_GPIO_4CH ||
+			    q_spec->subtype == Q_GPIO_SUBTYPE_GPIOC_4CH))
 				return -EINVAL;
 			if (q_spec->type == Q_MPP_TYPE &&
-			   (subtype == Q_MPP_SUBTYPE_4CH_NO_ANA_OUT ||
-			    subtype == Q_MPP_SUBTYPE_4CH_NO_SINK ||
-			    subtype == Q_MPP_SUBTYPE_4CH_FULL_FUNC ||
-			    subtype == Q_MPP_SUBTYPE_ULT_4CH_NO_ANA_OUT ||
-			    subtype == Q_MPP_SUBTYPE_ULT_4CH_NO_SINK))
+			   (q_spec->subtype == Q_MPP_SUBTYPE_4CH_NO_ANA_OUT ||
+			    q_spec->subtype == Q_MPP_SUBTYPE_4CH_NO_SINK ||
+			    q_spec->subtype == Q_MPP_SUBTYPE_4CH_FULL_FUNC))
 				return -EINVAL;
 		}
 		break;
@@ -319,8 +315,7 @@ static int qpnp_pin_check_config(enum qpnp_pin_param_type idx,
 	case Q_PIN_CFG_AOUT_REF:
 		if (q_spec->type != Q_MPP_TYPE)
 			return -ENXIO;
-		if (subtype == Q_MPP_SUBTYPE_4CH_NO_ANA_OUT ||
-		    subtype == Q_MPP_SUBTYPE_ULT_4CH_NO_ANA_OUT)
+		if (q_spec->subtype == Q_MPP_SUBTYPE_4CH_NO_ANA_OUT)
 			return -ENXIO;
 		if (val >= QPNP_PIN_AOUT_REF_INVALID)
 			return -EINVAL;
@@ -334,8 +329,7 @@ static int qpnp_pin_check_config(enum qpnp_pin_param_type idx,
 	case Q_PIN_CFG_CS_OUT:
 		if (q_spec->type != Q_MPP_TYPE)
 			return -ENXIO;
-		if (subtype == Q_MPP_SUBTYPE_4CH_NO_SINK ||
-		    subtype == Q_MPP_SUBTYPE_ULT_4CH_NO_SINK)
+		if (q_spec->subtype == Q_MPP_SUBTYPE_4CH_NO_SINK)
 			return -ENXIO;
 		if (val >= QPNP_PIN_CS_OUT_INVALID)
 			return -EINVAL;
@@ -427,11 +421,9 @@ static int qpnp_pin_ctl_regs_init(struct qpnp_pin_spec *q_spec)
 	else if (q_spec->type == Q_MPP_TYPE)
 		switch (q_spec->subtype) {
 		case Q_MPP_SUBTYPE_4CH_NO_SINK:
-		case Q_MPP_SUBTYPE_ULT_4CH_NO_SINK:
 			q_spec->num_ctl_regs = 12;
 			break;
 		case Q_MPP_SUBTYPE_4CH_NO_ANA_OUT:
-		case Q_MPP_SUBTYPE_ULT_4CH_NO_ANA_OUT:
 		case Q_MPP_SUBTYPE_4CH_FULL_FUNC:
 		case Q_MPP_SUBTYPE_8CH_FULL_FUNC:
 			q_spec->num_ctl_regs = 13;
@@ -1163,9 +1155,7 @@ static int qpnp_pin_is_valid_pin(struct qpnp_pin_spec *q_spec)
 	else if (q_spec->type == Q_MPP_TYPE)
 		switch (q_spec->subtype) {
 		case Q_MPP_SUBTYPE_4CH_NO_ANA_OUT:
-		case Q_MPP_SUBTYPE_ULT_4CH_NO_ANA_OUT:
 		case Q_MPP_SUBTYPE_4CH_NO_SINK:
-		case Q_MPP_SUBTYPE_ULT_4CH_NO_SINK:
 		case Q_MPP_SUBTYPE_4CH_FULL_FUNC:
 		case Q_MPP_SUBTYPE_8CH_FULL_FUNC:
 			return 1;
@@ -1173,6 +1163,64 @@ static int qpnp_pin_is_valid_pin(struct qpnp_pin_spec *q_spec)
 
 	return 0;
 }
+
+#ifdef CONFIG_PANTECH_PMIC_BOARD_TYPE
+#define SKT 1
+#define KT  2
+#define LGT 4
+
+static short check_board_type(void){
+
+
+    short board_type = 0;
+
+	gpio_request(pm_gpio_base + 2, NULL);
+	gpio_request(pm_gpio_base + 3, NULL);
+	gpio_request(pm_gpio_base + 7, NULL);
+	
+	gpio_direction_input(pm_gpio_base + 2 /* 3 */);
+	gpio_direction_input(pm_gpio_base + 3 /* 4 */);
+	gpio_direction_input(pm_gpio_base + 7 /* 8 */);
+
+    board_type = (0x1 & gpio_get_value(pm_gpio_base + 2));
+    board_type = board_type | (0x1 & gpio_get_value(pm_gpio_base + 3))<<1;
+    board_type = board_type | (0x1 & gpio_get_value(pm_gpio_base + 7))<<2;
+
+	gpio_free(pm_gpio_base + 2);
+	gpio_free(pm_gpio_base + 3);
+	gpio_free(pm_gpio_base + 7);
+
+    return board_type;
+}
+
+static int read_proc_board_type_info
+(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+    int len = 0;
+
+	switch(check_board_type()){
+	case SKT:
+		len  = sprintf(page, "SKT");
+		break;
+	case KT:
+		len  = sprintf(page, "KT");
+		break;
+	case LGT:
+		len  = sprintf(page, "LGT");
+		break;
+	default:
+		len  = sprintf(page, "NONE");
+		break;
+	}
+    return len;
+}
+
+static int write_proc_board_type_info
+(struct file *file, const char *buffer, unsigned long count, void *data)
+{
+    return 0;
+}
+#endif
 
 static int qpnp_pin_probe(struct spmi_device *spmi)
 {
@@ -1368,6 +1416,20 @@ static int qpnp_pin_probe(struct spmi_device *spmi)
 		dev_err(&spmi->dev, "%s: debugfs creation failed\n", __func__);
 		goto err_probe;
 	}
+
+#ifdef CONFIG_PANTECH_PMIC_BOARD_TYPE
+	if(strncmp(q_chip->gpio_chip.label, "pm8941-gpio", 11) == 0){
+		pm_gpio_base = q_chip->gpio_chip.base;
+		printk("========pm_base : %d", pm_gpio_base);
+		
+		board_type_info = create_proc_entry("board_type_info", S_IRUGO | S_IWUSR | S_IWGRP, NULL);
+		if (board_type_info) {
+			board_type_info->read_proc  = read_proc_board_type_info;
+			board_type_info->write_proc = write_proc_board_type_info;
+			board_type_info->data       = NULL;
+		}
+	}
+#endif
 
 	return 0;
 
