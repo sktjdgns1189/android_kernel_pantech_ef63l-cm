@@ -24,6 +24,7 @@
 #define _PN544_H_
 
 #include <linux/i2c.h>
+#include <linux/pn544.h>
 
 #define PN544_DRIVER_NAME	"pn544"
 #define PN544_MAXWINDOW_SIZE	7
