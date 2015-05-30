@@ -7,7 +7,6 @@
 #include <linux/gpio.h>
 #include "fts_ts.h"
 
-
 #define FTS_FW_REG_WRITE	0xB0
 #define FTS_FW_REG_READ		0xB2
 
@@ -87,7 +86,6 @@ extern int touch_error_cnt;
 extern char* touch_error_info;
 extern int pan_debug_state;
 
-
 struct pan_io_data {
 	int vendor_id;
 	int model_id;
@@ -126,15 +124,44 @@ static struct pan_io_data pan_io_data = {
 };
 
 #ifdef CONFIG_KEYBOARD_TC370	
-int pan_tm_key_resume(void);
-int pan_tm_key_suspend(void);
+static int pan_tm_key_resume(void);
+static int pan_tm_key_suspend(void);
 void pan_tm_set_mode(int mode);
+void pan_tm_set_cover_state(int state);
 #endif
+
 
 int ioctl_debug(unsigned long arg);
 unsigned char fts_read_raw_data(unsigned int Col, unsigned int Row);
 void raw_data_print(void);
 
+
+/*
+ * 15.05.30 SH.Ra
+ * Fix TSP random touch issue when suspend.
+ */
+#ifdef CONFIG_POWERSUSPEND
+#include <linux/powersuspend.h>
+
+static void fts_early_suspend(struct power_suspend *h)
+{
+		io_info->suspend(io_info);		
+#if defined(CONFIG_KEYBOARD_TC370) && !defined(CONFIG_KEYBOARD_TC370_SLEEP)
+		pan_tm_key_suspend();
+#endif
+}
+static void fts_late_resume(struct power_suspend *h)
+{
+		io_info->resume(io_info);		
+#if defined(CONFIG_KEYBOARD_TC370) && !defined(CONFIG_KEYBOARD_TC370_SLEEP)
+		pan_tm_key_resume();
+#endif		
+}
+static struct power_suspend fts_power_suspend = {
+	.suspend = fts_early_suspend,
+	.resume = fts_late_resume,
+};
+#endif
 
 #ifdef TOUCH_MONITOR
 char printproc_buf[1024];
@@ -450,9 +477,23 @@ int pan_fts_io_register(struct fts_ts_info *info)
   register_notify_func(EMERGENCY_MODE,"smart_cover",pan_hall_ic_event);
 #endif
 
+#ifdef CONFIG_POWERSUSPEND
+	register_power_suspend(&fts_power_suspend);
+#endif
+
 	return 0;
 }
 EXPORT_SYMBOL(pan_fts_io_register);
+
+int pan_fts_io_unregister()
+{
+#ifdef CONFIG_POWERSUSPEND
+	unregister_power_suspend(&fts_power_suspend);
+#endif
+
+	return 0;
+}
+EXPORT_SYMBOL(pan_fts_io_unregister);
 
 int ts_fops_open(struct inode *inode, struct file *filp)
 {	
@@ -515,21 +556,6 @@ long ts_fops_ioctl(struct file *filp,
 			input_report_key(io_info->input_dev, (int)argp, 0);
 		input_sync(io_info->input_dev); 
 		break;		
-	
-	case TOUCH_IOCTL_PRESS_TOUCH:
-		input_report_abs(io_info->input_dev, ABS_MT_POSITION_X, (int)(arg&0x0000FFFF));
-		input_report_abs(io_info->input_dev, ABS_MT_POSITION_Y, (int)((arg >> 16) & 0x0000FFFF));
-		input_report_abs(io_info->input_dev, ABS_MT_TOUCH_MAJOR, 255);
-		input_report_abs(io_info->input_dev, ABS_MT_WIDTH_MAJOR, 1);			
-		input_sync(io_info->input_dev);
-		break;
-	case TOUCH_IOCTL_RELEASE_TOUCH:		
-		input_report_abs(io_info->input_dev, ABS_MT_POSITION_X, (int)(arg&0x0000FFFF));
-		input_report_abs(io_info->input_dev, ABS_MT_POSITION_Y, (int)((arg >> 16) & 0x0000FFFF));
-		input_report_abs(io_info->input_dev, ABS_MT_TOUCH_MAJOR, 0);
-		input_report_abs(io_info->input_dev, ABS_MT_WIDTH_MAJOR, 1);			
-		input_sync(io_info->input_dev); 
-		break;			
 	case POWER_OFF:
 	//	pm_power_off();
 		break;
@@ -674,6 +700,7 @@ long ts_fops_ioctl(struct file *filp,
             dbg_cr("smart cover state is not equal. ic -> %d, ui -> %d\n",io_info->touch_mode_state.smart_cover,io_info->touch_mode_state.smart_cover_from_ui);
             io_info->touch_mode_state.smart_cover=io_info->touch_mode_state.smart_cover_from_ui;
           }
+          pan_tm_set_cover_state(io_info->touch_mode_state.smart_cover_from_ui);
           del_timer_sync(&io_info->touch_mode_state.check_smart_cover);
           break;
         default :
@@ -889,7 +916,7 @@ ssize_t write(struct file *file,
 	    dbg_cr("glove off\n");
 	    io_info->fts_command(io_info, FTS_CMD_MSHOVER_OFF);
 			io_info->mshover_enabled = 0;	
-	  }/*
+	  }
 	  else if(strncmp(buf, "pen_on",6) == 0){
 	    dbg_cr("pen on\n");
 	    io_info->fts_pen_mode_set(io_info,1);
@@ -897,7 +924,7 @@ ssize_t write(struct file *file,
 	  }else if(strncmp(buf, "pen_off",7) == 0){
 	    dbg_cr("pen off\n");
 	    io_info->fts_pen_mode_set(io_info,0);	
-	  }*/
+	  }
 
     else if(strncmp(buf, "error_check",11) == 0){
       dbg_cr("touch_error_cnt -> %d\n",touch_error_cnt);

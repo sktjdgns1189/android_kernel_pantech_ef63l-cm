@@ -59,27 +59,6 @@
 #include "fts.h"
 #include "fts_ts.h"
 
-struct fts_ts_info *shared_info = NULL;
-
-#ifdef CONFIG_POWERSUSPEND
-#include <linux/powersuspend.h>
-static int fts_suspend(struct fts_ts_info *info);
-static int fts_resume(struct fts_ts_info *info);
-
-static void fts_early_suspend(struct power_suspend *h)
-{
-	fts_suspend(shared_info);
-}
-static void fts_late_resume(struct power_suspend *h)
-{
-	fts_resume(shared_info);
-}
-static struct power_suspend fts_power_suspend = {
-	.suspend = fts_early_suspend,
-	.resume = fts_late_resume,
-};
-#endif
-
 //++ p11309 - 2013.12.22 
 enum tsp_power_pin_type {
 	POWER_NOT_USED=0,
@@ -165,6 +144,11 @@ char* touch_error_info=NULL;
 
 static int fts_stop_device(struct fts_ts_info *info);
 static int fts_start_device(struct fts_ts_info *info);
+
+#ifdef PAN_TSP_POWER_CTRL
+static int fts_suspend(struct fts_ts_info * info);
+static int fts_resume(struct fts_ts_info * info);
+#endif
 
 int fts_wait_for_ready(struct fts_ts_info *info);
 
@@ -264,7 +248,7 @@ void fts_stylus_mode_onoff(struct fts_ts_info *info, unsigned char onoff)
 	if(onoff == 1) 
 		regAdd[3] = 8;             		// When Stylus on mode, set motion_tol X.
 	else
-		regAdd[3] = 0x0C;                  	// When Stylus off mode, set motion_tol X.
+		regAdd[3] = 1;                  	// When Stylus off mode, set motion_tol X.
 
 	fts_write_reg(info, regAdd, 4);
 
@@ -277,7 +261,7 @@ void fts_stylus_mode_onoff(struct fts_ts_info *info, unsigned char onoff)
 	if(onoff == 1) 
 		regAdd[3] = 8;             		// When Stylus on mode, set motion_tol y.
 	else
-		regAdd[3] = 0x12;                  	// When Stylus off mode, set motion_tol y.
+		regAdd[3] = 1;                  	// When Stylus off mode, set motion_tol y.
 
 	fts_write_reg(info, regAdd, 4);
 
@@ -957,11 +941,6 @@ static unsigned char fts_event_handler_type_b(struct fts_ts_info *info,
 			booster_restart = true;
 #endif
 		case EVENTID_MOTION_POINTER:
-			info->finger[TouchID].state = EventID;
-
-			if (EventID == EVENTID_MOTION_POINTER)
-				info->finger[TouchID].mcount++;
-
 			x = data[1 + EventNum * FTS_EVENT_SIZE] +
 				((data[2 + EventNum * FTS_EVENT_SIZE] &
 				  0x0f) << 8);
@@ -986,8 +965,6 @@ static unsigned char fts_event_handler_type_b(struct fts_ts_info *info,
 			z = data[7 + EventNum * FTS_EVENT_SIZE];
 
 			input_mt_slot(info->input_dev, TouchID);
-			//2014.3.18 touch id
-			input_report_abs(info->input_dev, ABS_MT_TRACKING_ID, TouchID);			// TOUCH_ID
 			input_mt_report_slot_state(info->input_dev,
 					MT_TOOL_FINGER,
 					1 + (palm << 1));
@@ -1012,8 +989,8 @@ static unsigned char fts_event_handler_type_b(struct fts_ts_info *info,
 
 			// 			input_report_abs(info->input_dev, ABS_MT_ANGLE,
 			// 					 angle);
-			// 			input_report_abs(info->input_dev, ABS_MT_PALM,
-			// 					 palm);
+			 			input_report_abs(info->input_dev, ABS_MT_PALM,
+			 					 palm);
 
 #ifdef CONFIG_GLOVE_TOUCH
 			dbg_op("[P] tID:%d x:%d y:%d z:%d tc:%d tm:%d\n",
@@ -1042,7 +1019,6 @@ static unsigned char fts_event_handler_type_b(struct fts_ts_info *info,
 					info->panel_revision, info->fw_main_version_of_ic,
 					info->flip_enable, info->mshover_enabled);
 
-			info->finger[TouchID].mcount = 0;
 			break;
 #ifdef CONFIG_GLOVE_TOUCH
 		case EVENTID_STATUS_EVENT:
@@ -1587,6 +1563,8 @@ static int fts_probe(struct i2c_client *client, const struct i2c_device_id *idp)
 	info->panel_revision = info->board->panel_revision;
 	info->stop_device = fts_stop_device;
 	info->start_device = fts_start_device;
+	info->suspend = fts_suspend;
+	info->resume = fts_resume;
 	info->fts_command = fts_command;
 	info->fts_read_reg = fts_read_reg;
 	info->fts_write_reg = fts_write_reg;
@@ -1708,7 +1686,7 @@ static int fts_probe(struct i2c_client *client, const struct i2c_device_id *idp)
 			0, 255, 0, 0);
 	// 	input_set_abs_params(info->input_dev, ABS_MT_ANGLE,
 	// 				 -90, 90, 0, 0);
-	// 	input_set_abs_params(info->input_dev, ABS_MT_PALM, 0, 1, 0, 0);
+	input_set_abs_params(info->input_dev, ABS_MT_PALM, 0, 1, 0, 0);
 	input_set_abs_params(info->input_dev, ABS_MT_DISTANCE,
 			0, 255, 0, 0);
 
@@ -1811,12 +1789,6 @@ static int fts_probe(struct i2c_client *client, const struct i2c_device_id *idp)
 
 	complete_all(&info->init_done);
 
-	shared_info = info;
-
-#ifdef CONFIG_POWERSUSPEND
-	register_power_suspend(&fts_power_suspend);
-#endif
-
 #ifdef PAN_KNOCK_ON
 	device_init_wakeup(info->dev, 1);
 #endif
@@ -1910,16 +1882,13 @@ static int fts_remove(struct i2c_client *client)
 #endif
 
 #ifdef PAN_TSP_IO	
+	pan_fts_io_unregister();
 	misc_deregister(&touch_event);
 	misc_deregister(&touch_io);
 #endif
 
 #ifdef PAN_KNOCK_ON
 	device_init_wakeup(info->dev, 0);
-#endif
-
-#ifdef CONFIG_POWERSUSPEND
-	unregister_power_suspend(&fts_power_suspend);
 #endif
 
 	mutex_destroy(&info->lock);
@@ -2087,6 +2056,7 @@ out:
 
 }
 
+#ifdef PAN_TSP_POWER_CTRL
 static int fts_suspend(struct fts_ts_info *info)
 {
 	dbg_cr("%s\n", __func__);
@@ -2100,6 +2070,7 @@ static int fts_resume(struct fts_ts_info *info)
 	fts_start_device(info);
 	return 0;
 }
+#endif
 
 static const struct i2c_device_id fts_device_id[] = {
 	{"stmicro_fts_ts", 0},

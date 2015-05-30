@@ -31,11 +31,12 @@
 
 //++ p11309 - 2013.12.22 for disabled by wcjeong
 #define PAN_IRQ_WORKQUEUE
+#define PAN_TSP_POWER_CTRL
 #define SKY_PROCESS_CMD_KEY
 
 //++ p13106 2014.1.16 for touchMonitor App
 #define TOUCH_MONITOR
-//#define PAN_TOUCH_SET_PEN_MODE
+#define PAN_TOUCH_SET_PEN_MODE
 
 //++ P13106 2014.2.19 Touch Event Block when flip cover closed.
 #define PAN_TOUCH_EVENT_WITH_HALL_IC
@@ -60,6 +61,7 @@
 #define TOUCH_BOOSTER_MIF_FRQ_3		206000	/* MIF 206MHz */
 #define TOUCH_BOOSTER_INT_FRQ_3		160000	/* INT 160MHz */
 #endif
+
 
 #define FIRMWARE_IC					"fts_ic"
 
@@ -327,6 +329,7 @@ int GetSystemStatus(struct fts_ts_info *info, unsigned char *val1, unsigned char
 
 #ifdef PAN_TSP_IO
 int pan_fts_io_register(struct fts_ts_info * info);
+int pan_fts_io_unregister();
 int ts_fops_open(struct inode *inode, struct file *filp);
 long ts_fops_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 int open(struct inode *inode, struct file *file);
