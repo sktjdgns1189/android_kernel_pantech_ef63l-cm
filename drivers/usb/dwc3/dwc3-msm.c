@@ -1460,7 +1460,7 @@ void pantech_set_otg_signaling_param(int on)
 	
 	if (on) {
 #if defined(CONFIG_MACH_MSM8974_EF59S) || defined(CONFIG_MACH_MSM8974_EF59K) || defined(CONFIG_MACH_MSM8974_EF59L) \
-		|| defined(CONFIG_MACH_MAM8974_EF63S) || defined(CONFIG_MACH_MSM8974_EF63K) || defined(CONFIG_MACH_MSM8974_EF63L)
+		|| defined(CONFIG_MACH_MSM8974_EF63S) || defined(CONFIG_MACH_MSM8974_EF63K) || defined(CONFIG_MACH_MSM8974_EF63L)
 		//Set OTG on, HSUSB Signaling set hs amplitude 14% + source-impedance 1 ohm
 		dwc3_msm_write_readback(mdwc->base, PARAMETER_OVERRIDE_X_REG, 0x00301E00, (10 << 9) | (1 << 20)); 
 #else // others model(ef56, ef60)

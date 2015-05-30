@@ -261,6 +261,12 @@ static void mdss_mdp_cmd_readptr_done(void *arg)
 			ctx->rdptr_enabled--;
 	}
 
+#ifdef CONFIG_F_SKYDISP_FIX_PINGPONG_TIMEOUT_BY_CLOCK
+	/* keep clk on during kickoff */
+	if (ctx->rdptr_enabled == 0 && ctx->koff_cnt)
+		ctx->rdptr_enabled++;
+#endif
+
 	if (ctx->rdptr_enabled == 0) {
 		mdss_mdp_irq_disable_nosync
 			(MDSS_MDP_IRQ_PING_PONG_RD_PTR, ctx->pp_num);
@@ -511,9 +517,17 @@ int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 		WARN(rc, "intf %d panel on error (%d)\n", ctl->intf_num, rc);
 	}
 
+#ifndef CONFIG_F_SKYDISP_FIX_PINGPONG_TIMEOUT_BY_CLOCK
 	mdss_mdp_cmd_set_partial_roi(ctl);
 
 	mdss_mdp_cmd_clk_on(ctx);
+#else
+	spin_lock_irqsave(&ctx->clk_lock, flags);
+	ctx->koff_cnt++;
+	spin_unlock_irqrestore(&ctx->clk_lock, flags);
+	mdss_mdp_cmd_clk_on(ctx);
+	mdss_mdp_cmd_set_partial_roi(ctl);
+#endif
 
 	/*
 	 * tx dcs command if had any
@@ -524,9 +538,11 @@ int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 	INIT_COMPLETION(ctx->pp_comp);
 	mdss_mdp_irq_enable(MDSS_MDP_IRQ_PING_PONG_COMP, ctx->pp_num);
 	mdss_mdp_ctl_write(ctl, MDSS_MDP_REG_CTL_START, 1);
+#ifndef CONFIG_F_SKYDISP_FIX_PINGPONG_TIMEOUT_BY_CLOCK
 	spin_lock_irqsave(&ctx->clk_lock, flags);
 	ctx->koff_cnt++;
 	spin_unlock_irqrestore(&ctx->clk_lock, flags);
+#endif
 	mb();
 
 	return 0;
