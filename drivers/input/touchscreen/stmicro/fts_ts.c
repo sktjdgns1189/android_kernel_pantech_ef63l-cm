@@ -764,7 +764,7 @@ static int fts_init(struct fts_ts_info *info)
 	unsigned char regAdd[8];
 	int rc;
 
-	dbg_cr("FTS Initial Start..\n");
+	printk("FTS Initial Start..\n");
 
 	fts_delay(300);
 
@@ -854,7 +854,7 @@ static int fts_init(struct fts_ts_info *info)
 
 	MutualTouchMode = false;
 
-	dbg_cr("FTS Initialised..\n");
+	printk("FTS Initialised..\n");
 
 	return 0;
 }
@@ -941,6 +941,10 @@ static unsigned char fts_event_handler_type_b(struct fts_ts_info *info,
 			booster_restart = true;
 #endif
 		case EVENTID_MOTION_POINTER:
+			info->finger[TouchID].state = EventID;
+
+			if (EventID == EVENTID_MOTION_POINTER)
+				info->finger[TouchID].mcount++;
 			x = data[1 + EventNum * FTS_EVENT_SIZE] +
 				((data[2 + EventNum * FTS_EVENT_SIZE] &
 				  0x0f) << 8);
@@ -965,6 +969,8 @@ static unsigned char fts_event_handler_type_b(struct fts_ts_info *info,
 			z = data[7 + EventNum * FTS_EVENT_SIZE];
 
 			input_mt_slot(info->input_dev, TouchID);
+			//2014.3.18 touch id
+			input_report_abs(info->input_dev, ABS_MT_TRACKING_ID, TouchID);			// TOUCH_ID
 			input_mt_report_slot_state(info->input_dev,
 					MT_TOOL_FINGER,
 					1 + (palm << 1));
@@ -989,8 +995,8 @@ static unsigned char fts_event_handler_type_b(struct fts_ts_info *info,
 
 			// 			input_report_abs(info->input_dev, ABS_MT_ANGLE,
 			// 					 angle);
-			 			input_report_abs(info->input_dev, ABS_MT_PALM,
-			 					 palm);
+			// 			input_report_abs(info->input_dev, ABS_MT_PALM,
+			// 					 palm);
 
 #ifdef CONFIG_GLOVE_TOUCH
 			dbg_op("[P] tID:%d x:%d y:%d z:%d tc:%d tm:%d\n",
@@ -1019,6 +1025,7 @@ static unsigned char fts_event_handler_type_b(struct fts_ts_info *info,
 					info->panel_revision, info->fw_main_version_of_ic,
 					info->flip_enable, info->mshover_enabled);
 
+			info->finger[TouchID].mcount = 0;
 			break;
 #ifdef CONFIG_GLOVE_TOUCH
 		case EVENTID_STATUS_EVENT:
@@ -1686,7 +1693,7 @@ static int fts_probe(struct i2c_client *client, const struct i2c_device_id *idp)
 			0, 255, 0, 0);
 	// 	input_set_abs_params(info->input_dev, ABS_MT_ANGLE,
 	// 				 -90, 90, 0, 0);
-	input_set_abs_params(info->input_dev, ABS_MT_PALM, 0, 1, 0, 0);
+	// 	input_set_abs_params(info->input_dev, ABS_MT_PALM, 0, 1, 0, 0);
 	input_set_abs_params(info->input_dev, ABS_MT_DISTANCE,
 			0, 255, 0, 0);
 
@@ -1846,7 +1853,6 @@ err_check_pantech:
 		dbg_cr("touch_io can''t register misc device\n");
 	}
 	return ret;
-
 }
 
 static int fts_remove(struct i2c_client *client)
@@ -1903,61 +1909,6 @@ static int fts_remove(struct i2c_client *client)
 	return 0;
 }
 
-static void fts_reinit(struct fts_ts_info *info)
-{
-	int rc;
-	fts_wait_for_ready(info);
-
-	fts_systemreset(info);
-
-	rc=fts_wait_for_ready(info);
-	if (rc==-2) {
-		info->fw_version_of_ic =0;
-		info->config_version_of_ic=0;
-		info->fw_main_version_of_ic=0;
-	} else
-		fts_get_version_info(info);
-
-#ifdef FTS_PANTECH_PRODUCT_LINE
-	if(info->mflag_init_test)
-		fts_check_product_line(info);
-#endif /* FTS_PANTECH_PRODUCT_LINE */	
-
-#ifdef FTS_SUPPORT_NOISE_PARAM
-	fts_set_noise_param(info);
-#endif
-
-#ifdef PAN_TOUCH_SET_PEN_MODE
-	if(info->touch_mode_state.touch == PAN_TOUCH_MODE_FINGER || info->touch_mode_state.touch == PAN_TOUCH_MODE_GLOVE){
-		fts_stylus_mode_onoff(info,PAN_TOUCH_MODE_FINGER);
-	}else{
-		fts_command(info, SLEEPOUT);
-		fts_command(info, SENSEON);
-	}
-#else
-	fts_command(info, SLEEPOUT);
-	fts_command(info, SENSEON);
-#endif
-
-
-	if (info->flip_enable) {
-		fts_set_stylus_mode(info, false);
-	} else {
-		if (info->mshover_enabled)
-			fts_command(info, FTS_CMD_MSHOVER_ON);
-	}
-#if defined(FTS_SUPPORT_TA_MODE) || defined (FTS_SUPPORT_TA_MODE_PANTECH)
-	if (info->TA_Pluged)
-		fts_command(info, FTS_CMD_CHARGER_PLUGGED);
-#endif
-
-
-	info->touch_count = 0;
-
-	fts_command(info, FLUSHBUFFER);
-	fts_interrupt_set(info, INT_ENABLE);
-}
-
 void fts_release_all_finger(struct fts_ts_info *info)
 {
 	int i;
@@ -1971,7 +1922,7 @@ void fts_release_all_finger(struct fts_ts_info *info)
 			if (info->touch_count < 0)
 				info->touch_count = 0;
 
-			dbg_op("[R] tID:%d mc: %d tc:%d Ver[%02X]\n",
+			printk("[R] tID:%d mc: %d tc:%d Ver[%02X]\n",
 					i, info->finger[i].mcount,
 					info->touch_count, info->panel_revision);
 		}
@@ -1996,6 +1947,58 @@ void fts_release_all_finger(struct fts_ts_info *info)
 #ifdef TSP_BOOSTER
 	fts_set_dvfs_lock(info, TSP_BOOSTER_FORCE_OFF, false);
 #endif
+}
+
+static void fts_reinit(struct fts_ts_info *info)
+{
+    printk("SHDBGTSP : REINIT\n");
+	int rc;
+	fts_wait_for_ready(info);
+
+	fts_systemreset(info);
+
+	fts_wait_for_ready(info);
+
+#ifdef FTS_SUPPORT_NOISE_PARAM
+	fts_set_noise_param(info);
+#endif
+
+#ifdef PAN_TOUCH_SET_PEN_MODE
+	if(info->touch_mode_state.touch == PAN_TOUCH_MODE_FINGER || info->touch_mode_state.touch == PAN_TOUCH_MODE_GLOVE){
+		fts_stylus_mode_onoff(info,PAN_TOUCH_MODE_FINGER);
+	}else{
+		fts_command(info, SLEEPOUT);
+		fts_delay(50);
+		fts_command(info, SENSEON);
+		fts_delay(50);
+	}
+#else
+	fts_command(info, SLEEPOUT);
+	fts_delay(50);
+	fts_command(info, SENSEON);
+	fts_delay(50);
+#endif
+
+
+	if (info->flip_enable) {
+		fts_set_stylus_mode(info, false);
+	} else {
+		if (info->mshover_enabled)
+			fts_command(info, FTS_CMD_MSHOVER_ON);
+	}
+#if defined(FTS_SUPPORT_TA_MODE) || defined (FTS_SUPPORT_TA_MODE_PANTECH)
+	if (info->TA_Pluged)
+		fts_command(info, FTS_CMD_CHARGER_PLUGGED);
+#endif
+
+    printk("SHDBGTSP : REINIT - release all finger\n");
+	fts_release_all_finger(info);
+	info->touch_count = 0;
+
+	fts_command(info, FLUSHBUFFER);
+	fts_interrupt_set(info, INT_ENABLE);
+
+    printk("SHDBGTSP : REINIT DONE\n");
 }
 
 static int fts_stop_device(struct fts_ts_info *info)
@@ -2043,13 +2046,10 @@ static int fts_start_device(struct fts_ts_info *info)
 
 	info->touch_stopped = false;
 
-	if(info->mflag_init_test){
-		queue_work(fts_event_wq, &info->init_test_work);	  
-		return 0;
-	}else{  
-		fts_reinit(info);
-		enable_irq(info->irq);
-	}
+	fts_reinit(info);
+
+	enable_irq(info->irq);
+
 out:
 	mutex_unlock(&info->device_mutex);
 	return 0;
@@ -2090,7 +2090,6 @@ static struct i2c_driver fts_i2c_driver = {
 	},
 	.probe = fts_probe,
 	.remove = fts_remove,
-
 	.id_table = fts_device_id,
 };
 
