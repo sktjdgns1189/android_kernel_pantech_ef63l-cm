@@ -145,7 +145,7 @@ void raw_data_print(void);
 
 static void fts_early_suspend(struct power_suspend *h)
 {
-		printk("SHDBGTSP : FTS SUSPEND!\n");
+		//printk("SHDBGTSP : FTS SUSPEND!\n");
 		io_info->suspend(io_info);		
 #if defined(CONFIG_KEYBOARD_TC370) && !defined(CONFIG_KEYBOARD_TC370_SLEEP)
 		pan_tm_key_suspend();
@@ -153,7 +153,7 @@ static void fts_early_suspend(struct power_suspend *h)
 }
 static void fts_late_resume(struct power_suspend *h)
 {
-		printk("SHDBGTSP : FTS RESUME!\n");
+		//printk("SHDBGTSP : FTS RESUME!\n");
 		io_info->resume(io_info);		
 #if defined(CONFIG_KEYBOARD_TC370) && !defined(CONFIG_KEYBOARD_TC370_SLEEP)
 		pan_tm_key_resume();
@@ -483,7 +483,7 @@ int pan_fts_io_register(struct fts_ts_info *info)
 	register_power_suspend(&fts_power_suspend);
 #endif
 
-    printk("SHDBGTSP : PANTECH TOUCH FUCKIN MODE SET START!\nLET'S SEE FUCKIN VALUE : \nshover : %d state : %d\n", io_info->mshover_enabled, io_info->touch_mode_state.touch);
+	//printk("SHDBGTSP : PANTECH TOUCH FUCKIN MODE SET START!\nLET'S SEE FUCKIN VALUE : \nshover : %d state : %d\n", io_info->mshover_enabled, io_info->touch_mode_state.touch);
 	if(io_info->touch_mode_state.touch == PAN_TOUCH_MODE_GLOVE){
 	  // set disable glove mode
 	  io_info->fts_command(io_info, FTS_CMD_MSHOVER_OFF);
@@ -494,10 +494,10 @@ int pan_fts_io_register(struct fts_ts_info *info)
 	}
 	io_info->touch_mode_state.touch = 0;
 	#ifdef CONFIG_KEYBOARD_TC370  
-    printk("SHDBGTSP : FINGERMOD TM SET\n");
+	//printk("SHDBGTSP : FINGERMOD TM SET\n");
 	pan_tm_set_mode(PAN_TOUCH_MODE_FINGER);
 	#endif
-printk("SHDBGTSP : LET'S SEE INSIRTED VALUE : \nshover : %d state : %d\n", io_info->mshover_enabled, io_info->touch_mode_state.touch);
+	//printk("SHDBGTSP : LET'S SEE INSIRTED VALUE : \nshover : %d state : %d\n", io_info->mshover_enabled, io_info->touch_mode_state.touch);
 	return 0;
 }
 EXPORT_SYMBOL(pan_fts_io_register);

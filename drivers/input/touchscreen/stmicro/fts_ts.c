@@ -764,7 +764,7 @@ static int fts_init(struct fts_ts_info *info)
 	unsigned char regAdd[8];
 	int rc;
 
-	printk("FTS Initial Start..\n");
+	//printk("FTS Initial Start..\n");
 
 	fts_delay(300);
 
@@ -854,7 +854,7 @@ static int fts_init(struct fts_ts_info *info)
 
 	MutualTouchMode = false;
 
-	printk("FTS Initialised..\n");
+	//printk("FTS Initialised..\n");
 
 	return 0;
 }
@@ -1951,7 +1951,7 @@ void fts_release_all_finger(struct fts_ts_info *info)
 
 static void fts_reinit(struct fts_ts_info *info)
 {
-    printk("SHDBGTSP : REINIT\n");
+	//printk("SHDBGTSP : REINIT\n");
 	int rc;
 	fts_wait_for_ready(info);
 
@@ -1991,14 +1991,14 @@ static void fts_reinit(struct fts_ts_info *info)
 		fts_command(info, FTS_CMD_CHARGER_PLUGGED);
 #endif
 
-    printk("SHDBGTSP : REINIT - release all finger\n");
+	//printk("SHDBGTSP : REINIT - release all finger\n");
 	fts_release_all_finger(info);
 	info->touch_count = 0;
 
 	fts_command(info, FLUSHBUFFER);
 	fts_interrupt_set(info, INT_ENABLE);
 
-    printk("SHDBGTSP : REINIT DONE\n");
+	//printk("SHDBGTSP : REINIT DONE\n");
 }
 
 static int fts_stop_device(struct fts_ts_info *info)
