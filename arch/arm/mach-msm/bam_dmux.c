@@ -61,7 +61,13 @@ module_param_named(max_sleep, POLLING_MAX_SLEEP,
 static int POLLING_INACTIVITY = 1;
 module_param_named(inactivity, POLLING_INACTIVITY,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
+
+#ifdef CONFIG_SKY_DS_BAM_ADAPTIVE_TIMER_OFF
+static int bam_adaptive_timer_enabled = 0;
+#else
 static int bam_adaptive_timer_enabled;
+#endif /* CONFIG_SKY_DS_BAM_ADAPTIVE_TIMER_OFF */
+
 module_param_named(adaptive_timer_enabled,
 			bam_adaptive_timer_enabled,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
@@ -2517,7 +2523,7 @@ static int bam_dmux_probe(struct platform_device *pdev)
 
 	rc = bam_ops->smsm_state_cb_register_ptr(SMSM_MODEM_STATE,
 			SMSM_A2_POWER_CONTROL,
-			bam_dmux_smsm_cb, NULL);
+					bam_dmux_smsm_cb, NULL);
 
 	if (rc) {
 		destroy_workqueue(bam_mux_rx_workqueue);
@@ -2528,7 +2534,7 @@ static int bam_dmux_probe(struct platform_device *pdev)
 
 	rc = bam_ops->smsm_state_cb_register_ptr(SMSM_MODEM_STATE,
 			SMSM_A2_POWER_CONTROL_ACK,
-			bam_dmux_smsm_ack_cb, NULL);
+					bam_dmux_smsm_ack_cb, NULL);
 
 	if (rc) {
 		destroy_workqueue(bam_mux_rx_workqueue);

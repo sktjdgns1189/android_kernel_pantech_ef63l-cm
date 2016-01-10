@@ -32,6 +32,12 @@
 #include <mach/socinfo.h>
 #include <mach/rpm-regulator.h>
 
+#if defined(CONFIG_PANTECH_DEBUG)
+#if defined(CONFIG_PANTECH_DEBUG_DCVS_LOG) //p14291_pantech_dbg
+#include <mach/pantech_debug.h> 
+#endif
+#endif
+
 #include "acpuclock.h"
 #include "avs.h"
 
@@ -762,6 +768,7 @@ static int acpuclk_8x60_set_rate(int cpu, unsigned long rate,
 
 	pr_debug("Switching from ACPU%d rate %u KHz -> %u KHz\n",
 		cpu, strt_s->acpuclk_khz, tgt_s->acpuclk_khz);
+
 
 	/* Switch CPU speed. */
 	switch_sc_speed(cpu, tgt_s);

@@ -470,6 +470,11 @@ struct input_keymap_entry {
 #define KEY_RFKILL		247	/* Key that controls all radios */
 
 #define KEY_MICMUTE		248	/* Mute / unmute the microphone */
+// LS2 p13106. Add Key information.
+#define KEY_DOME        251
+#define KEY_VT_CALL  252
+// LS2 p13106. Add Key information.
+
 
 /* Code 255 is reserved for special needs of AT keyboard driver */
 

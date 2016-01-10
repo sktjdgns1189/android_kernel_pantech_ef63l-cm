@@ -339,6 +339,7 @@ static int msm_rpm_set_exclusive(int ctx,
 
 	/* Ensure RPM data is written before sending the interrupt */
 	mb();
+
 	msm_rpm_send_req_interrupt();
 
 	spin_unlock(&msm_rpm_irq_lock);
@@ -415,6 +416,7 @@ static int msm_rpm_set_exclusive_noirq(int ctx,
 
 	/* Ensure RPM data is written before sending the interrupt */
 	mb();
+
 	msm_rpm_send_req_interrupt();
 
 	msm_rpm_busy_wait_for_request_completion(false);

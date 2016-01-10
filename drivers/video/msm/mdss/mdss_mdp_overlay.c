@@ -156,9 +156,11 @@ int mdss_mdp_overlay_req_check(struct msm_fb_data_type *mfd,
 			pr_err("Invalid decimation factors horz=%d vert=%d\n",
 					req->horz_deci, req->vert_deci);
 			return -EINVAL;
+#ifdef CONFIG_F_QUALCOMM_VIDEO_PLAYER_HALT			
 		} else if (req->flags & MDP_BWC_EN) {
 			pr_err("Decimation can't be enabled with BWC\n");
 			return -EINVAL;
+#endif
 		}
 	}
 
@@ -258,11 +260,28 @@ int mdss_mdp_overlay_req_check(struct msm_fb_data_type *mfd,
 	return 0;
 }
 
+#ifdef CONFIG_F_QUALCOMM_BUGFIX_MDP_UNDERRUN
+#define MUCH_DOWNSCALE(pipe) ((pipe->dst.w * 3) < pipe->src.w)
+#define NO_DECIMATION	0
+#endif
 static int __mdp_pipe_tune_perf(struct mdss_mdp_pipe *pipe)
 {
 	struct mdss_data_type *mdata = pipe->mixer->ctl->mdata;
 	struct mdss_mdp_perf_params perf;
 	int rc;
+
+#ifdef CONFIG_F_QUALCOMM_BUGFIX_MDP_UNDERRUN
+	if (pipe->src_fmt->is_yuv && MUCH_DOWNSCALE(pipe)) {
+		if(mdata->has_decimation && !pipe->bwc_mode &&
+			(pipe->vert_deci == NO_DECIMATION)) {
+			pipe->vert_deci++;
+		} else {
+			pr_debug("%s : Falling back to GPU comp.\
+				due to too much downscale\n", __func__);
+			return -EPERM;
+		}
+	}
+#endif
 
 	for (;;) {
 		rc = mdss_mdp_perf_calc_pipe(pipe, &perf);
@@ -318,10 +337,12 @@ static int __mdss_mdp_overlay_setup_scaling(struct mdss_mdp_pipe *pipe)
 				rc, src, pipe->dst.h);
 		return rc;
 	}
+#ifndef CONFIG_F_QUALCOMM_BWC_VIDEO_DISPLAY_HALT	
 	pipe->scale.init_phase_x[0] = (pipe->scale.phase_step_x[0] -
 					(1 << PHASE_STEP_SHIFT)) / 2;
 	pipe->scale.init_phase_y[0] = (pipe->scale.phase_step_y[0] -
 					(1 << PHASE_STEP_SHIFT)) / 2;
+#endif	
 	return rc;
 }
 
@@ -997,6 +1018,13 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 	if (data)
 		mdss_mdp_set_roi(ctl, data);
 
+#ifdef CONFIG_F_QUALCOMM_BUGFIX_MDP_UNDERRUN
+	list_for_each_entry(pipe, &mdp5_data->pipes_cleanup, cleanup_list) { 
+		mdss_mdp_pipe_queue_data(pipe, NULL); 
+		mdss_mdp_mixer_pipe_unstage(pipe); 
+	}
+#endif
+	
 	list_for_each_entry(pipe, &mdp5_data->pipes_used, used_list) {
 		struct mdss_mdp_data *buf;
 		/*
@@ -1123,7 +1151,9 @@ static int mdss_mdp_overlay_release(struct msm_fb_data_type *mfd, int ndx)
 					&mdp5_data->pipes_cleanup);
 			}
 			mutex_unlock(&mfd->lock);
+#ifndef CONFIG_F_QUALCOMM_BUGFIX_MDP_UNDERRUN			
 			mdss_mdp_mixer_pipe_unstage(pipe);
+#endif			
 			mdss_mdp_pipe_unmap(pipe);
 		}
 	}
@@ -1270,9 +1300,6 @@ static int mdss_mdp_overlay_queue(struct msm_fb_data_type *mfd,
 
 	flags = (pipe->flags & MDP_SECURE_OVERLAY_SESSION);
 	flags |= (pipe->flags & MDP_SECURE_DISPLAY_OVERLAY_SESSION);
-
-	if (!mfd->panel_info->cont_splash_enabled)
-		mdss_iommu_attach(mdata);
 
 	if (!mfd->panel_info->cont_splash_enabled)
 		mdss_iommu_attach(mdata);
@@ -2662,6 +2689,10 @@ static int mdss_mdp_overlay_splash_image(struct msm_fb_data_type *mfd,
 	struct fb_info *fbi = NULL;
 	int image_len = 0;
 
+#if defined (CONFIG_F_SKYDISP_EF56_SS) || defined (CONFIG_F_SKYDISP_EF59_SS) || defined (CONFIG_F_SKYDISP_EF60_SS) ||defined (CONFIG_F_SKYDISP_EF63_SS)
+       return 0;
+#endif
+
 	if (!mfd || !mfd->fbi || !mfd->fbi->screen_base || !pipe_ndx) {
 		pr_err("Invalid input parameter\n");
 		return -EINVAL;
@@ -2883,7 +2914,7 @@ int mdss_mdp_overlay_init(struct msm_fb_data_type *mfd)
 		if (IS_ERR_VALUE(rc)) {
 			pr_err("unable to create vsync timeline\n");
 			goto init_fail;
-		}
+	}
 	}
 	mfd->mdp_sync_pt_data.async_wait_fences = true;
 	rc = sysfs_create_link_nowarn(&dev->kobj,
