@@ -1,6 +1,11 @@
 #Android makefile to build kernel as a part of Android Build
 PERL		= perl
 
+KERNEL_TARGET := $(strip $(INSTALLED_KERNEL_TARGET))
+ifeq ($(KERNEL_TARGET),)
+INSTALLED_KERNEL_TARGET := $(PRODUCT_OUT)/kernel
+endif
+
 ifeq ($(TARGET_PREBUILT_KERNEL),)
 
 KERNEL_OUT := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
@@ -19,25 +24,7 @@ DTS_NAMES ?= $(shell $(PERL) -e 'while (<>) {$$a = $$1 if /CONFIG_ARCH_((?:MSM|Q
 KERNEL_USE_OF ?= $(shell $(PERL) -e '$$of = "n"; while (<>) { if (/CONFIG_USE_OF=y/) { $$of = "y"; break; } } print $$of;' kernel/arch/arm/configs/$(KERNEL_DEFCONFIG))
 
 ifeq "$(KERNEL_USE_OF)" "y"
-ifeq ($(OEM_PRODUCT_MANUFACTURER),PANTECH)
-PANTECH_PRODUCT_MODEL := $(shell echo $(PROJECT_NAME) | tr A-Z a-z)
-PANTECH_BOARD_VERSION := $(shell echo $(PANTECH_BOARD_VER) | tr A-Z a-z)
-ifeq ($(MSM_VER),V30)
-ifeq ($(PANTECH_BOARD_VERSION),)
-DTS_FILES = $(wildcard $(TOP)/kernel/arch/arm/boot/dts/msm8974pro-ab-pm8941-$(PANTECH_PRODUCT_MODEL).dts)
-else
-DTS_FILES = $(wildcard $(TOP)/kernel/arch/arm/boot/dts/msm8974pro-ab-pm8941-$(PANTECH_PRODUCT_MODEL)-$(PANTECH_BOARD_VERSION).dts)
-endif
-else
-ifeq ($(PANTECH_BOARD_VERSION),)
-DTS_FILES = $(wildcard $(TOP)/kernel/arch/arm/boot/dts/msm8974-v2.2-$(PANTECH_PRODUCT_MODEL).dts)
-else
-DTS_FILES = $(wildcard $(TOP)/kernel/arch/arm/boot/dts/msm8974-v2.2-$(PANTECH_PRODUCT_MODEL)-$(PANTECH_BOARD_VERSION).dts)
-endif
-endif
-else
 DTS_FILES = $(wildcard $(TOP)/kernel/arch/arm/boot/dts/$(DTS_NAME)*.dts)
-endif
 DTS_FILE = $(lastword $(subst /, ,$(1)))
 DTB_FILE = $(addprefix $(KERNEL_OUT)/arch/arm/boot/,$(patsubst %.dts,%.dtb,$(call DTS_FILE,$(1))))
 ZIMG_FILE = $(addprefix $(KERNEL_OUT)/arch/arm/boot/,$(patsubst %.dts,%-zImage,$(call DTS_FILE,$(1))))
@@ -80,78 +67,34 @@ mpath=`dirname $$mdpath`; rm -rf $$mpath;\
 fi
 endef
 
-# 20131223 LS1-p13795 modified for exFAT file system
-ifeq ($(PANTECH_SDXC_EXFAT_FS),true)
-ifeq ($(PANTECH_SDXC_EXFAT_BUILD),true)
-define exfat-module
-if test -e kheaders*.tar.bz2;then\
-rm -rf kheaders*.tar.bz2;\
-fi
-if test -e tuxera-exfat-3012.4.9.2-apq8064.tgz;then\
-rm -rf tuxera-exfat-3012.4.9.2-apq8064.tgz;\
-rm -rf tuxera-exfat-3012.4.9.2-apq8064;\
-fi
-if test -e tuxera-exfat-*-msm8974*.tgz;then\
-rm -rf tuxera_exfat_hash;\
-rm -rf tuxera-exfat-*-msm8974*.tgz;\
-rm -rf tuxera-exfat-*-msm8974*;\
-fi
-./tuxera_update.sh --source-dir $(TOP)/kernel --output-dir $(KERNEL_OUT) -a --target target/pantech.d/msm8974 --user pantech --pass feke57aze93ni --use-cache --cache-dir $(TOP)/tuxera_exfat_hash
-tar -xvzf tuxera-exfat-*-msm8974*.tgz
-cp tuxera-exfat-*-msm8974*/exfat/kernel-module/texfat.ko $(KERNEL_MODULES_OUT)
-mpath=`find $(TARGET_OUT) -type d -name bin`;\
-if [ "$$mdpath" == "" ];then\
-mkdir -p $(TARGET_OUT)/bin;\
-fi
-cp tuxera-exfat-*-msm8974*/exfat/tools/* $(TARGET_OUT)/bin
-endef
-else
-define exfat-module
-cp tuxera-exfat-*-msm8974*/exfat/kernel-module/texfat.ko $(KERNEL_MODULES_OUT)
-cp tuxera-exfat-*-msm8974*/exfat/tools/* $(TARGET_OUT)/bin
-endef
-endif
-else
-define exfat-module
-endef
-endif
-
 $(KERNEL_OUT):
 	mkdir -p $(KERNEL_OUT)
 
-ifeq ($(PANTECH_PERF_BUILD),true)	
 $(KERNEL_CONFIG): $(KERNEL_OUT)
-	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-eabi- $(KERNEL_DEFCONFIG) PERF_DEFCONFIG=msm8974_pantech_perf_defconfig
-else	
-$(KERNEL_CONFIG): $(KERNEL_OUT)
-	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-eabi- $(KERNEL_DEFCONFIG)
-endif	
+	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-linux-androideabi- $(KERNEL_DEFCONFIG)
 
 $(KERNEL_OUT)/piggy : $(TARGET_PREBUILT_INT_KERNEL)
 	$(hide) gunzip -c $(KERNEL_OUT)/arch/arm/boot/compressed/piggy.gzip > $(KERNEL_OUT)/piggy
 
 $(TARGET_PREBUILT_INT_KERNEL): $(KERNEL_OUT) $(KERNEL_CONFIG) $(KERNEL_HEADERS_INSTALL)
-	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-eabi-
-	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-eabi- modules
-	$(MAKE) -C kernel O=../$(KERNEL_OUT) INSTALL_MOD_PATH=../../$(KERNEL_MODULES_INSTALL) INSTALL_MOD_STRIP=1 ARCH=arm CROSS_COMPILE=arm-eabi- modules_install
+	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-linux-androideabi-
+	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-linux-androideabi- modules
+	$(MAKE) -C kernel O=../$(KERNEL_OUT) INSTALL_MOD_PATH=../../$(KERNEL_MODULES_INSTALL) INSTALL_MOD_STRIP=1 ARCH=arm CROSS_COMPILE=arm-linux-androideabi- modules_install
 	$(mv-modules)
 	$(clean-module-folder)
 	$(append-dtb)
-	$(exfat-module)
 
 $(KERNEL_HEADERS_INSTALL): $(KERNEL_OUT) $(KERNEL_CONFIG)
-	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-eabi- headers_install
+	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-linux-androideabi- headers_install
 
 kerneltags: $(KERNEL_OUT) $(KERNEL_CONFIG)
-	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-eabi- tags
+	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-linux-androideabi- tags
 
 kernelconfig: $(KERNEL_OUT) $(KERNEL_CONFIG)
 	env KCONFIG_NOTIMESTAMP=true \
-	     $(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-eabi- xconfig
-#	env KCONFIG_NOTIMESTAMP=true \ #20130225 jylee modify menuconfig -> xconfig
-#	     $(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-eabi- menuconfig
+	     $(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-linux-androideabi- menuconfig
 	env KCONFIG_NOTIMESTAMP=true \
-	     $(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-eabi- savedefconfig
+	     $(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-linux-androideabi- savedefconfig
 	cp $(KERNEL_OUT)/defconfig kernel/arch/arm/configs/$(KERNEL_DEFCONFIG)
 
 endif

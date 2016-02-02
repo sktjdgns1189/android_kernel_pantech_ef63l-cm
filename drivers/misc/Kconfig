@@ -654,9 +654,6 @@ config USB_HSIC_SMSC_HUB
 	  This adds support for connecting devices like mouse in HSIC
 	  Host mode.
 
-config DRV2603
-	bool "TI DRV2603"
-
 config TI_DRV2667
 	tristate "TI's DRV2667 haptic controller support"
 	depends on I2C
@@ -667,6 +664,12 @@ config TI_DRV2667
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called ti_drv2667.
+
+config UID_CPUTIME
+	tristate "Per-UID cpu time statistics"
+	depends on PROFILING
+	help
+	  Per UID based cpu time statistics exported to /proc/uid_cputime
 
 config PN544
 	bool "NXP PN544 NFC Controller Driver"
@@ -681,8 +684,7 @@ config PN547
 	default y
 	help
 	  NXP PN547 Near Field Communication controller support.
-	  
-	  
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

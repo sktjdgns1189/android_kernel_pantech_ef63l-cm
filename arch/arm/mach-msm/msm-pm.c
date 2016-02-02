@@ -71,7 +71,7 @@
 static void save_hwrev_forSensor_toProcfs(void);
 #endif
 
-static int msm_pm_debug_mask = 1;
+static int msm_pm_debug_mask __refdata = 1;
 module_param_named(
 	debug_mask, msm_pm_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP
 );
@@ -128,14 +128,14 @@ static char *msm_pm_sleep_mode_labels[MSM_PM_SLEEP_MODE_NR] = {
 		"standalone_power_collapse",
 };
 
-static bool msm_pm_ldo_retention_enabled = true;
+static bool msm_pm_ldo_retention_enabled __refdata = true;
 static bool msm_no_ramp_down_pc;
 static struct msm_pm_sleep_status_data *msm_pm_slp_sts;
 DEFINE_PER_CPU(struct clk *, cpu_clks);
 static struct clk *l2_clk;
 
 static int cpu_count;
-static DEFINE_SPINLOCK(cpu_cnt_lock);
+static __refdata DEFINE_SPINLOCK(cpu_cnt_lock);
 #define SCM_HANDOFF_LOCK_ID "S:7"
 static bool need_scm_handoff_lock;
 static remote_spinlock_t scm_handoff_lock;
@@ -149,7 +149,7 @@ static void __iomem *msm_pc_debug_counters;
  * Default the l2 flush flag to OFF so the caches are flushed during power
  * collapse unless the explicitly voted by lpm driver.
  */
-static enum msm_pm_l2_scm_flag msm_pm_flush_l2_flag = MSM_SCM_L2_OFF;
+static enum msm_pm_l2_scm_flag msm_pm_flush_l2_flag __refdata = MSM_SCM_L2_OFF;
 
 void msm_pm_set_l2_flush_flag(enum msm_pm_l2_scm_flag flag)
 {
@@ -163,7 +163,7 @@ static enum msm_pm_l2_scm_flag msm_pm_get_l2_flush_flag(void)
 }
 
 static cpumask_t retention_cpus;
-static DEFINE_SPINLOCK(retention_lock);
+static __refdata DEFINE_SPINLOCK(retention_lock);
 
 static int msm_pm_get_pc_mode(struct device_node *node,
 		const char *key, uint32_t *pc_mode_val)
@@ -476,8 +476,8 @@ static inline void msm_pc_inc_debug_count(uint32_t cpu,
 	if (!msm_pc_debug_counters)
 		return;
 
-	cnt = readl_relaxed(msm_pc_debug_counters + cpu * 4 + offset * 4);
-	writel_relaxed(++cnt, msm_pc_debug_counters + cpu * 4 + offset * 4);
+	cnt = readl_relaxed(msm_pc_debug_counters + cpu * 4 * MSM_PC_NUM_COUNTERS + offset * 4);
+	writel_relaxed(++cnt, msm_pc_debug_counters + cpu * 4 * MSM_PC_NUM_COUNTERS + offset * 4);
 	mb();
 }
 
@@ -721,12 +721,6 @@ static enum msm_pm_time_stats_id msm_pm_power_collapse(bool from_idle)
 	avs_set_avsdscr(avsdscr);
 	avs_set_avscsr(avscsr);
 
-#if defined(CONFIG_PANTECH_DEBUG)
-#if defined(CONFIG_PANTECH_DEBUG_SCHED_LOG)
-	pantechdbg_sched_msg("-(PC)");
-#endif
-#endif
-
 	if (MSM_PM_DEBUG_POWER_COLLAPSE & msm_pm_debug_mask)
 		pr_info("CPU%u: %s: post power up\n", cpu, __func__);
 
@@ -826,17 +820,19 @@ int msm_cpu_pm_enter_sleep(enum msm_pm_sleep_mode mode, bool from_idle)
 		pr_info("CPU%u: %s mode:%d\n",
 			smp_processor_id(), __func__, mode);
 
-	time = sched_clock();
+	if (from_idle)
+		time = sched_clock();
+
 	if (execute[mode])
 		exit_stat = execute[mode](from_idle);
-	time = sched_clock() - time;
-	if (from_idle)
+
+	if (from_idle) {
+		time = sched_clock() - time;
 		msm_pm_ftrace_lpm_exit(smp_processor_id(), mode, collapsed);
-	else
-		exit_stat = MSM_PM_STAT_SUSPEND;
-	if (exit_stat >= 0)
-		msm_pm_add_stat(exit_stat, time);
-	do_div(time, 1000);
+		if (exit_stat >= 0)
+			msm_pm_add_stat(exit_stat, time);
+	}
+
 	return collapsed;
 }
 
@@ -925,32 +921,6 @@ void msm_pm_enable_retention(bool enable)
 }
 EXPORT_SYMBOL(msm_pm_enable_retention);
 
-#if defined(CONFIG_CHECK_HWREV_FOR_CHANGING_PROXIMITY_THRESHOLD)
-static oem_pm_smem_vendor1_data_type *smem_id_vendor1_ptr;
-static int read_proc_sensor
-    (char *page, char **start, off_t offset, int count, int *eof, void *data) {
-        
-    int hw_rev;
-
-    if(smem_id_vendor1_ptr == NULL) {
-        smem_id_vendor1_ptr = (oem_pm_smem_vendor1_data_type*)smem_alloc(SMEM_ID_VENDOR1,
-            sizeof(oem_pm_smem_vendor1_data_type));
-    }
-    hw_rev = (int)smem_id_vendor1_ptr->hw_rev;
-
-    return sprintf(page, "%d", hw_rev);
-}
-
-static void save_hwrev_forSensor_toProcfs(void) {
-    struct proc_dir_entry *entryForSensor;
-    
-    entryForSensor = create_proc_entry("sensor_hwrev", 0, NULL);
-    if(entryForSensor) {
-       entryForSensor->read_proc = read_proc_sensor;
-    }
-}
-#endif
-
 static int msm_pm_snoc_client_probe(struct platform_device *pdev)
 {
 	int rc = 0;
@@ -974,10 +944,6 @@ static int msm_pm_snoc_client_probe(struct platform_device *pdev)
 		if (rc)
 			pr_err("%s: Error setting bus rate", __func__);
 	}
-
-#if defined(CONFIG_CHECK_HWREV_FOR_CHANGING_PROXIMITY_THRESHOLD)
-    save_hwrev_forSensor_toProcfs();
-#endif
 
 snoc_cl_probe_done:
 	return rc;
@@ -1046,7 +1012,7 @@ static int msm_cpu_status_probe(struct platform_device *pdev)
 	return 0;
 };
 
-static struct of_device_id msm_slp_sts_match_tbl[] = {
+static struct of_device_id msm_slp_sts_match_tbl[] __initdata= {
 	{.compatible = "qcom,cpu-sleep-status"},
 	{},
 };
@@ -1060,7 +1026,7 @@ static struct platform_driver msm_cpu_status_driver = {
 	},
 };
 
-static struct of_device_id msm_snoc_clnt_match_tbl[] = {
+static struct of_device_id msm_snoc_clnt_match_tbl[] __initdata = {
 	{.compatible = "qcom,pm-snoc-client"},
 	{},
 };
@@ -1327,7 +1293,7 @@ static int msm_cpu_pm_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static struct of_device_id msm_cpu_pm_table[] = {
+static struct of_device_id msm_cpu_pm_table[] __initdata = {
 	{.compatible = "qcom,pm-8x60"},
 	{},
 };
