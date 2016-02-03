@@ -37,9 +37,6 @@
 
 #define ULL_SUPPORTED_SAMPLE_RATE 48000
 #define ULL_MAX_SUPPORTED_CHANNEL 2
-#ifdef CONFIG_PANTECH_SND_FLAC //20131223 jhsong : qct patch for 24bit pcm on offload
-#define ULL_SUPPORTED_BITS_PER_SAMPLE 16
-#endif
 enum {
 	ADM_RX_AUDPROC_CAL,
 	ADM_TX_AUDPROC_CAL,
@@ -1129,15 +1126,8 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 	int index;
 	int tmp_port = q6audio_get_port_id(port_id);
 
-#ifdef CONFIG_PANTECH_SND_FLAC //20131223 jhsong : qct patch for 24bit pcm on offload
-	pr_debug("%s: port %#x path:%d rate:%d mode:%d perf_mode:%d,\
-			topology: %d, bits_per_sample: %d\n", __func__,
-			port_id, path, rate, channel_mode, perf_mode,
-			topology, bits_per_sample);
-#else
 	pr_debug("%s: port %#x path:%d rate:%d mode:%d perf_mode:%d\n",
 		 __func__, port_id, path, rate, channel_mode, perf_mode);
-#endif
 
 	port_id = q6audio_convert_virtual_to_portid(port_id);
 
@@ -1213,9 +1203,6 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 			rate = ULL_SUPPORTED_SAMPLE_RATE;
 			if(channel_mode > ULL_MAX_SUPPORTED_CHANNEL)
 				channel_mode = ULL_MAX_SUPPORTED_CHANNEL;
-#ifdef CONFIG_PANTECH_SND_FLAC //20131223 jhsong : qct patch for 24bit pcm on offload
-			bits_per_sample = ULL_SUPPORTED_BITS_PER_SAMPLE;
-#endif
 		} else if (perf_mode == LOW_LATENCY_PCM_MODE) {
 			if ((open.topology_id == DOLBY_ADM_COPP_TOPOLOGY_ID) ||
 			    (open.topology_id == SRS_TRUMEDIA_TOPOLOGY_ID))
