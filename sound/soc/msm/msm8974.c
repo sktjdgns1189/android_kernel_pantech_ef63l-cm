@@ -46,7 +46,9 @@
 #define BTSCO_RATE_16KHZ 16000
 
 static int slim0_rx_bit_format = SNDRV_PCM_FORMAT_S16_LE;
+#if !defined(CONFIG_PANTECH_SND)
 static int slim0_tx_bit_format = SNDRV_PCM_FORMAT_S16_LE;
+#endif
 static int hdmi_rx_bit_format = SNDRV_PCM_FORMAT_S16_LE;
 
 #define SAMPLING_RATE_48KHZ 48000

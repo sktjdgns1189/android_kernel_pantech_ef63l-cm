@@ -334,7 +334,7 @@ void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 #endif
 	}
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
-	mdss_set_tx_power_mode(0 , &ctrl->panel_data );
+	mdss_dsi_set_tx_power_mode(0 , &ctrl->panel_data );
         msleep(2);
 
 	//if(ctrl->manufacture_id == SAMSUNG_DRIVER_IC)
@@ -343,7 +343,7 @@ void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	mdss_dsi_cmds_send(ctrl,&cmdreq,&backlight_cmd);
 	mdss_dsi_cmds_send(ctrl,&cmdreq,&aor_cmd);
 	mdss_dsi_cmds_send(ctrl,&cmdreq,&elvss_cmd);
-	mdss_dsi_cmds_send(ctrl,&cmdreq,&locking_cmd);
+	mdss_dsi_cmds_send(ctrl,&cmdreq,&locking_fix_cmd);
 #if (1) // no-feature because urgency-issue
 /*
 * 20140422, kkcho, Bug-Fix : Sometimes.. backlight_set fail
@@ -371,7 +371,7 @@ void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 #endif  
 
 	msleep(1);
-	mdss_set_tx_power_mode(1 ,&ctrl->panel_data);
+	mdss_dsi_set_tx_power_mode(1 ,&ctrl->panel_data);
         mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
 
 	pr_err(" %d backlight level = %d AOR = 0x%x ELVSS = 0x%x TEMP = 0x%x lock = 0x%x ctrl->onflag = %d\n",
@@ -407,44 +407,6 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
 }
 #endif
-
-static int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
-{
-	int rc = 0;
-
-	if (gpio_is_valid(ctrl_pdata->disp_en_gpio)) {
-		rc = gpio_request(ctrl_pdata->disp_en_gpio,
-						"disp_enable");
-		if (rc) {
-			pr_err("request disp_en gpio failed, rc=%d\n",
-				       rc);
-			goto disp_en_gpio_err;
-		}
-	}
-	rc = gpio_request(ctrl_pdata->rst_gpio, "disp_rst_n");
-	if (rc) {
-		pr_err("request reset gpio failed, rc=%d\n",
-			rc);
-		goto rst_gpio_err;
-	}
-	if (gpio_is_valid(ctrl_pdata->mode_gpio)) {
-		rc = gpio_request(ctrl_pdata->mode_gpio, "panel_mode");
-		if (rc) {
-			pr_err("request panel mode gpio failed,rc=%d\n",
-								rc);
-			goto mode_gpio_err;
-		}
-	}
-	return rc;
-
-mode_gpio_err:
-	gpio_free(ctrl_pdata->rst_gpio);
-rst_gpio_err:
-	if (gpio_is_valid(ctrl_pdata->disp_en_gpio))
-		gpio_free(ctrl_pdata->disp_en_gpio);
-disp_en_gpio_err:
-	return rc;
-}
 
 int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 {
@@ -619,8 +581,8 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 		if (gpio_is_valid(ctrl_pdata->mode_gpio))
 			gpio_free(ctrl_pdata->mode_gpio);
 	}
+#endif
 	return rc;
-#endif	
 }
 
 static char caset[] = {0x2a, 0x00, 0x00, 0x03, 0x00};	/* DTYPE_DCS_LWRITE */
@@ -875,11 +837,11 @@ void acl_control(struct mdss_panel_data *pdata, int state)
 		acl_data[1] = 0x03;
 	}
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
-	mdss_set_tx_power_mode(0 , pdata );
+	mdss_dsi_set_tx_power_mode(0 , pdata );
 	
 	mdss_dsi_cmds_send(ctrl_pdata,&cmdreq,&acl_data_cmd);
 	
-	mdss_set_tx_power_mode(1 , pdata );
+	mdss_dsi_set_tx_power_mode(1 , pdata );
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);	
 	pr_info("Oled acl  = %d \n",state );
 }
@@ -933,14 +895,14 @@ void hbm_control_magna(struct mdss_panel_data *pdata, int state)
 	cmdreq.cb = NULL;
 
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
-	mdss_set_tx_power_mode(0 , pdata );
+	mdss_dsi_set_tx_power_mode(0 , pdata );
 	
 	mdss_dsi_cmdlist_put(ctrl_pdata, &cmdreq);
 	
 	cmdreq.cmds = &acl_data_cmd;
 	mdss_dsi_cmdlist_put(ctrl_pdata, &cmdreq);
 	
-	mdss_set_tx_power_mode(1 , pdata );
+	mdss_dsi_set_tx_power_mode(1 , pdata );
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
 	//pdata->hbm_flag = state;
 	pr_info("Oled hbm %s \n",state ? "on" : "off" );
@@ -987,7 +949,7 @@ void hbm_control_ddi(struct mdss_panel_data *pdata, int state)
 	
 	
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
-	mdss_set_tx_power_mode(0 , &ctrl_pdata->panel_data );
+	mdss_dsi_set_tx_power_mode(0 , &ctrl_pdata->panel_data );
 	
 	if(state == 1){
 		//mdss_dsi_cmds_send(ctrl_pdata,&cmdreq,&mtp_unlock_cmd);
@@ -1016,7 +978,7 @@ void hbm_control_ddi(struct mdss_panel_data *pdata, int state)
 		ctrl_pdata->hbm_onoff = false;
 	}	
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, true);
-	mdss_set_tx_power_mode(1 , &ctrl_pdata->panel_data );
+	mdss_dsi_set_tx_power_mode(1 , &ctrl_pdata->panel_data );
 	//pdata->hbm_flag = state;
 	pr_info("Oled hbm %s \n",state ? "on" : "off" );
 }
@@ -1272,11 +1234,11 @@ void mtp_read_work(struct work_struct *work)
 				panel_data);
 
 	mdss_dsi_sw_reset(pdata);
-	mdss_dsi_host_init(&panel_info->mipi, pdata);
+	mdss_dsi_host_init(pdata);
 	mdss_dsi_op_mode_config(panel_info->mipi.mode, pdata);
 
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
-	mdss_set_tx_power_mode(0 , pdata );
+	mdss_dsi_set_tx_power_mode(0 , pdata );
 
 #ifdef CONFIG_F_SKYDISP_EF63_DRIVER_IC_CHECK
 	ef63_octa_driver_ic_check(ctrl_pdata);	
@@ -1304,7 +1266,7 @@ void mtp_read_work(struct work_struct *work)
 	else
 		pr_err("not connected");
 	
-	mdss_set_tx_power_mode(1 , pdata );
+	mdss_dsi_set_tx_power_mode(1 , pdata );
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
 
 	if(ctrl_pdata->manufacture_id == SAMSUNG_DRIVER_IC)
@@ -1389,13 +1351,13 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 		break;
 	case BL_DCS_CMD:
 #if defined (CONFIG_F_SKYDISP_EF56_SS) || defined (CONFIG_F_SKYDISP_EF59_SS) || defined (CONFIG_F_SKYDISP_EF60_SS)
-		mdss_set_tx_power_mode(0 , pdata );
+		mdss_dsi_set_tx_power_mode(0 , pdata );
 		msleep(2);
 #endif
 		mdss_dsi_panel_bklt_dcs(ctrl_pdata, bl_level);
 #if defined (CONFIG_F_SKYDISP_EF56_SS) || defined (CONFIG_F_SKYDISP_EF59_SS) || defined (CONFIG_F_SKYDISP_EF60_SS)
 		msleep(1);
-		mdss_set_tx_power_mode(1 , pdata);
+		mdss_dsi_set_tx_power_mode(1 , pdata);
 #endif
 		if (mdss_dsi_is_master_ctrl(ctrl_pdata)) {
 			struct mdss_dsi_ctrl_pdata *sctrl =

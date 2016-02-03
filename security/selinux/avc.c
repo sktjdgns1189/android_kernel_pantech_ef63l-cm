@@ -102,6 +102,14 @@ static struct kmem_cache *avc_operation_decision_node_cachep;
 static struct kmem_cache *avc_operation_node_cachep;
 static struct kmem_cache *avc_operation_perm_cachep;
 
+#ifdef CONFIG_PANTECH_SELINUX_DENIAL_LOG //P11536-SHPARK-SELinux 
+static struct pantech_avc_format pantech_avc;
+struct pantech_avc_format pantech_get_avc(void)
+{     
+    return pantech_avc;
+}
+#endif
+
 static inline int avc_hash(u32 ssid, u32 tsid, u16 tclass)
 {
 	return (ssid ^ (tsid<<2) ^ (tclass<<4)) & (AVC_CACHE_SLOTS - 1);

@@ -503,6 +503,7 @@ static void __mdss_dsi_ctrl_setup(struct mdss_panel_data *pdata)
 	u32 ystride, bpp, data, dst_bpp;
 	u32 dummy_xres, dummy_yres;
 	u32 hsync_period, vsync_period;
+	int ret = 0;
 
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
@@ -512,7 +513,7 @@ static void __mdss_dsi_ctrl_setup(struct mdss_panel_data *pdata)
 	ret = mdss_dsi_panel_power_on(pdata, 1);
 	if (ret) {
 		pr_err("%s: Panel power on failed\n", __func__);
-		return ret;
+		return;
 	}
 
 	clk_rate = pdata->panel_info.clk_rate;

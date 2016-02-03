@@ -1938,7 +1938,7 @@ static int mass_storage_function_init(struct android_usb_function *f,
 	config->fsg.luns[config->fsg.nluns].cdrom = 1;
 	config->fsg.luns[config->fsg.nluns].ro = 1;
 	//JB patch
-	name[config->fsg.nluns]="lun0";
+	snprintf(name[config->fsg.nluns], MAX_LUN_NAME, "lun0");
 	config->fsg.nluns++;	
 #endif
 
