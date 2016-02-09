@@ -124,8 +124,8 @@ static struct pan_io_data pan_io_data = {
 };
 
 #ifdef CONFIG_KEYBOARD_TC370	
-static int pan_tm_key_resume(void);
-static int pan_tm_key_suspend(void);
+int pan_tm_key_resume(void);
+int pan_tm_key_suspend(void);
 void pan_tm_set_mode(int mode);
 void pan_tm_set_cover_state(int state);
 #endif
@@ -485,7 +485,7 @@ int pan_fts_io_register(struct fts_ts_info *info)
 }
 EXPORT_SYMBOL(pan_fts_io_register);
 
-int pan_fts_io_unregister()
+int pan_fts_io_unregister(void)
 {
 #ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&fts_power_suspend);
