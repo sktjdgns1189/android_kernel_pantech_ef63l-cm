@@ -3442,7 +3442,7 @@ static int pt_bq2419x_chg_resume(struct device *dev)
 	
 	return rc;
 }
-static void pt_bq2419x_chg_suspend(bool state)
+static void pt_bq2419x_chg_suspended(bool state)
 {
 	mutex_lock(&resume_lock);
 	suspended = state;
@@ -3472,7 +3472,7 @@ static int pt_bq2419x_chg_suspend(struct device *dev)
 	struct pt_bq2419x_chg_chip *chip = dev_get_drvdata(dev);
 	int rc = 0;
 
-	pt_bq2419x_chg_suspend(true);
+	pt_bq2419x_chg_suspended(true);
 	cancel_delayed_work(&chip->update_heartbeat);
 	
 	if (chip->bat_if_base) {
@@ -3491,7 +3491,7 @@ static int pt_bq2419x_chg_suspend(struct device *dev)
 #endif
 	enable_irq_wake(chip->vin_irq);
 
-	pt_bq2419x_chg_suspend(false);
+	pt_bq2419x_chg_suspended(false);
 
 	return rc;
 }
