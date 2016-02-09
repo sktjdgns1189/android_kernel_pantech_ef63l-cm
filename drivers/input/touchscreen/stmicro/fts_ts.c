@@ -250,7 +250,7 @@ void fts_stylus_mode_onoff(struct fts_ts_info *info, unsigned char onoff)
 	if(onoff == 1) 
 		regAdd[3] = 8;             		// When Stylus on mode, set motion_tol X.
 	else
-		regAdd[3] = 0x0C;                  	// When Stylus off mode, set motion_tol X.
+		regAdd[3] = 1;                  	// When Stylus off mode, set motion_tol X.
 
 	fts_write_reg(info, regAdd, 4);
 
@@ -263,7 +263,7 @@ void fts_stylus_mode_onoff(struct fts_ts_info *info, unsigned char onoff)
 	if(onoff == 1) 
 		regAdd[3] = 8;             		// When Stylus on mode, set motion_tol y.
 	else
-		regAdd[3] = 0x12;                  	// When Stylus off mode, set motion_tol y.
+		regAdd[3] = 1;                  	// When Stylus off mode, set motion_tol y.
 
 	fts_write_reg(info, regAdd, 4);
 
@@ -1892,6 +1892,7 @@ static int fts_remove(struct i2c_client *client)
 #endif
 
 #ifdef PAN_TSP_IO	
+	pan_fts_io_unregister();
 	misc_deregister(&touch_event);
 	misc_deregister(&touch_io);
 #endif
