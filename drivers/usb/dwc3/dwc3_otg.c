@@ -86,6 +86,10 @@ static void dwc3_otg_reset(struct dwc3_otg *dotg);
 static void dwc3_otg_notify_host_mode(struct usb_otg *otg, int host_mode);
 static void dwc3_otg_reset(struct dwc3_otg *dotg);
 
+#ifdef CONFIG_PANTECH_PMIC_CHARGER_BQ2419X
+extern void pt_bq2419x_chg_wait_for_resume(void);
+#endif
+
 /**
  * dwc3_otg_set_host_regs - reset dwc3 otg registers to host operation.
  *
@@ -289,6 +293,11 @@ static int dwc3_otg_start_host(struct usb_otg *otg, int on)
 #endif
 	if (on) {
 		dev_dbg(otg->phy->dev, "%s: turn on host\n", __func__);
+
+#ifdef CONFIG_PANTECH_PMIC_CHARGER_BQ2419X
+		/* Wait until I2C bus is active */
+		pt_bq2419x_chg_wait_for_resume();
+#endif
 
 #if defined(CONFIG_PANTECH_PMIC_CHARGER_SMB347) || defined(CONFIG_PANTECH_PMIC_CHARGER_SMB349)
 		//xsemiyas_debug:warmup_time

@@ -504,6 +504,11 @@ static struct pt_bq2419x_chg_chip *testmenu;
 static struct platform_device *bms_input_attr_dev;
 static struct mutex			masked_write_lock;
 
+/* Ensure I2C bus is active for OTG */
+static bool suspended;
+static DECLARE_COMPLETION(resume_done);
+static DEFINE_MUTEX(resume_lock);
+
 #if defined(FEATURE_WORKAROUND_NC_CHARGER)
 extern int composite_get_udc_state(char *udc_state);
 #endif
@@ -3437,12 +3442,37 @@ static int pt_bq2419x_chg_resume(struct device *dev)
 	
 	return rc;
 }
+static void pt_bq2419x_chg_suspend(bool state)
+{
+	mutex_lock(&resume_lock);
+	suspended = state;
+	mutex_unlock(&resume_lock);
+
+	if (!suspended)
+		complete(&resume_done);
+}
+
+void pt_bq2419x_chg_wait_for_resume(void)
+{
+	bool asleep;
+
+	mutex_lock(&resume_lock);
+	asleep = suspended;
+	mutex_unlock(&resume_lock);
+
+	if (asleep) {
+		INIT_COMPLETION(resume_done);
+		wait_for_completion_timeout(&resume_done,
+					msecs_to_jiffies(100));
+	}
+}
 
 static int pt_bq2419x_chg_suspend(struct device *dev)
 {
 	struct pt_bq2419x_chg_chip *chip = dev_get_drvdata(dev);
 	int rc = 0;
 
+	pt_bq2419x_chg_suspend(true);
 	cancel_delayed_work(&chip->update_heartbeat);
 	
 	if (chip->bat_if_base) {
@@ -3460,6 +3490,8 @@ static int pt_bq2419x_chg_suspend(struct device *dev)
 	enable_irq_wake(chip->bq2419x_irq);
 #endif
 	enable_irq_wake(chip->vin_irq);
+
+	pt_bq2419x_chg_suspend(false);
 
 	return rc;
 }
