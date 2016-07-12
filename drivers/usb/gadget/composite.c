@@ -701,6 +701,7 @@ static int set_config(struct usb_composite_dev *cdev,
 					cdev->delayed_status);
 		}
 	}
+
 #ifdef FEATURE_PANTECH_SSUSB_MAXPOWER_SET
 	if(cdev->vbus_draw_units == 8) //SSUSB
 		power = 900;

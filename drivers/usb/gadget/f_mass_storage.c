@@ -663,7 +663,7 @@ static int fsg_setup(struct usb_function *f,
 		if (fsg->common->cdev)
 			return USB_GADGET_DELAYED_STATUS;
 		else
-		return DELAYED_STATUS;
+			return DELAYED_STATUS;
 
 	case US_BULK_GET_MAX_LUN:
 		if (ctrl->bRequestType !=

@@ -63,6 +63,7 @@
 #include <linux/tty.h>
 
 #include "audit.h"
+
 #ifdef CONFIG_PANTECH_SELINUX_DENIAL_LOG //P11536-SHPARK-SELinux 
 #include <linux/avclog.h>
 #endif

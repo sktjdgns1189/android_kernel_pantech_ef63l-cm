@@ -41,7 +41,6 @@
 #define SCM_SET_REGSAVE_CMD	0x2
 #define SCM_SVC_SEC_WDOG_DIS	0x7
 
-
 #ifdef CONFIG_PANTECH_ERR_CRASH_LOGGING
 #define TARGET_APPS_CPUS  4
 typedef  unsigned int uint32;

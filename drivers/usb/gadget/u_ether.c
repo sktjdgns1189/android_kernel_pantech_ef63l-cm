@@ -730,14 +730,14 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 	 * or the hardware can't use skb buffers.
 	 * or there's not enough space for extra headers we need
 	 */
-		spin_lock_irqsave(&dev->lock, flags);
+	spin_lock_irqsave(&dev->lock, flags);
 	if (dev->wrap) {
 		if (dev->port_usb)
 			skb = dev->wrap(dev->port_usb, skb);
 		if (!skb) {
-		spin_unlock_irqrestore(&dev->lock, flags);
+			spin_unlock_irqrestore(&dev->lock, flags);
 			goto drop;
-	}
+		}
 	}
 
 	if (multi_pkt_xfer) {

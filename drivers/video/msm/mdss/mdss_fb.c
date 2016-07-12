@@ -774,7 +774,8 @@ static void mdss_fb_remove_sysfs(struct msm_fb_data_type *mfd)
 {
 	sysfs_remove_group(&mfd->fbi->dev->kobj, &mdss_fb_attr_group);
 }
-#ifdef  CONFIG_F_SKYDISP_SHUTDOWN_BUGFIX
+
+#ifdef CONFIG_F_SKYDISP_SHUTDOWN_BUGFIX
 static void mdss_fb_shutdown(struct platform_device *pdev)
 {
 	struct msm_fb_data_type *mfd = platform_get_drvdata(pdev);
@@ -785,6 +786,7 @@ static void mdss_fb_shutdown(struct platform_device *pdev)
 	unlock_fb_info(mfd->fbi);
 }
 #endif
+
 static int mdss_fb_probe(struct platform_device *pdev)
 {
 	struct msm_fb_data_type *mfd = NULL;
@@ -1129,9 +1131,10 @@ static void mdss_fb_scale_bl(struct msm_fb_data_type *mfd, u32 *bl_lvl)
 #ifndef CONFIG_MACH_MSM8974_EF63S
 		temp = (temp * mfd->bl_scale) / 1024;
 #endif
-	/*if less than minimum level, use min level*/
+
+		/*if less than minimum level, use min level*/
 		if (temp < mfd->bl_min_lvl)
-		temp = mfd->bl_min_lvl;
+			temp = mfd->bl_min_lvl;
 	}
 	pr_debug("output = %d", temp);
 
@@ -1147,16 +1150,15 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 
 	if (((!mfd->panel_power_on && mfd->dcm_state != DCM_ENTER)
 		|| !mfd->bl_updated) && !IS_CALIB_MODE_BL(mfd)) {
-				mfd->unset_bl_level = bkl_lvl;
+		mfd->unset_bl_level = bkl_lvl;
 #if defined(CONFIG_MACH_MSM8974_EF63S) || defined(CONFIG_MACH_MSM8974_EF63K) || defined(CONFIG_MACH_MSM8974_EF63L)				
-            if(mfd->bl_level_old != temp) {
-	            ;
-	        }
-		    else {
-		        return;
-		    }
-#else
+		if(mfd->bl_level_old != temp) {
+			;
+		} else {
 			return;
+		}
+#else
+		return;
 #endif			
 	} else {
 		mfd->unset_bl_level = 0;
@@ -1782,7 +1784,7 @@ static int mdss_fb_release_all(struct fb_info *info, bool release_all)
 			else
 				mfd->ref_cnt--;
 
-		pinfo->ref_cnt--;
+			pinfo->ref_cnt--;
 			pm_runtime_put(info->dev);
 		} while (release_all && pinfo->ref_cnt);
 
@@ -1833,7 +1835,7 @@ static int mdss_fb_release_all(struct fb_info *info, bool release_all)
 		}
 
 		ret = mdss_fb_blank_sub(FB_BLANK_POWERDOWN, info,
-				       mfd->op_enable);
+			mfd->op_enable);
 		if (ret) {
 			pr_err("can't turn off fb%d! rc=%d process %s pid=%d\n",
 				mfd->index, ret, task->comm, pid);
@@ -1902,15 +1904,15 @@ void mdss_fb_wait_for_fence(struct msm_sync_pt_data *sync_pt_data)
 					WAIT_FENCE_FINAL_TIMEOUT);
 		}
 		sync_fence_put(fences[i]);
-		}
+	}
 
 	if (ret < 0) {
 		pr_err("%s: sync_fence_wait failed! ret = %x\n",
 				sync_pt_data->fence_name, ret);
 		for (; i < fence_cnt; i++)
 			sync_fence_put(fences[i]);
-		}
 	}
+}
 
 /**
  * mdss_fb_signal_timeline() - signal a single release fence
@@ -2160,8 +2162,8 @@ static int __mdss_fb_perform_commit(struct msm_fb_data_type *mfd)
 			pr_err("pan display failed %x on fb%d\n", ret,
 					mfd->index);
 	}
-		if (!ret)
-			mdss_fb_update_backlight(mfd);
+	if (!ret)
+		mdss_fb_update_backlight(mfd);
 
 	if (IS_ERR_VALUE(ret) || !sync_pt_data->flushed)
 		mdss_fb_signal_timeline(sync_pt_data);
@@ -2177,7 +2179,7 @@ static int __mdss_fb_display_thread(void *data)
 
 	param.sched_priority = 16;
 	ret = sched_setscheduler(current, SCHED_FIFO, &param);
-		if (ret)
+	if (ret)
 		pr_warn("set priority failed for fb%d display thread\n",
 				mfd->index);
 
@@ -2539,7 +2541,7 @@ static int mdss_fb_handle_buf_sync_ioctl(struct msm_sync_pt_data *sync_pt_data,
 		if (fence == NULL) {
 			pr_err("%s: null fence! i=%d fd=%d\n",
 					sync_pt_data->fence_name, i,
-				acq_fen_fd[i]);
+					acq_fen_fd[i]);
 			ret = -EINVAL;
 			break;
 		}
@@ -2776,6 +2778,7 @@ struct fb_info *msm_fb_get_writeback_fb(void)
 
 	return NULL;
 }
+
 struct msm_fb_data_type * mfdmsm_fb_get_mfd(void)
 {
 	int c = 0;
@@ -2787,6 +2790,7 @@ struct msm_fb_data_type * mfdmsm_fb_get_mfd(void)
 	}
 	return NULL;
 }
+
 EXPORT_SYMBOL(msm_fb_get_writeback_fb);
 
 static int mdss_fb_register_extra_panel(struct platform_device *pdev,

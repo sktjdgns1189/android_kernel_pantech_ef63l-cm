@@ -2694,7 +2694,6 @@ static irqreturn_t smsm_irq_handler(int irq, void *data)
 				flush_cache_all();
 				outer_flush_all();
 			}
-
 			modem_queue_start_reset_notify();
 
 		} else if (modm & SMSM_INIT) {

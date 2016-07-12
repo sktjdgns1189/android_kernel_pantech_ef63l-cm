@@ -1580,9 +1580,11 @@ regulator_turn_off:
 						"Enable reg write failed(%d)\n",
 						rc);
 				}
+
 #if (defined(CONFIG_PANTECH_CAMERA))//flash
 			if (!global_torch_enable) {
 #endif
+
 				rc = regulator_disable(led_array[i].flash_cfg->\
 							flash_boost_reg);
 				if (rc) {
@@ -1635,9 +1637,11 @@ regulator_turn_off:
 			dev_err(&led->spmi_dev->dev,
 				"Enable reg write failed(%d)\n", rc);
 		}
+
 #if (defined(CONFIG_PANTECH_CAMERA))//flash
 		if (!global_torch_enable) {
 #endif
+
 		rc = regulator_disable(led->flash_cfg->torch_boost_reg);
 		if (rc) {
 			dev_err(&led->spmi_dev->dev,
@@ -1689,7 +1693,7 @@ static int qpnp_flash_set(struct qpnp_led_data *led)
 					rc);
 					goto error_flash_set;
 				}
-				}
+			}
 
 			rc = qpnp_led_masked_write(led,
 				FLASH_LED_UNLOCK_SECURE(led->base),
@@ -1865,17 +1869,17 @@ static int qpnp_flash_set(struct qpnp_led_data *led)
 				led->flash_cfg->trigger_flash |=
 						FLASH_HW_SW_STROBE_SEL_MASK;
 
-				rc = qpnp_led_masked_write(led,
-					FLASH_LED_STROBE_CTRL(led->base),
-					led->flash_cfg->trigger_flash,
-					led->flash_cfg->trigger_flash);
-				if (rc) {
-					dev_err(&led->spmi_dev->dev,
-					"LED %d strobe reg write failed(%d)\n",
-					led->id, rc);
-					goto error_flash_set;
-				}
-				}
+			rc = qpnp_led_masked_write(led,
+				FLASH_LED_STROBE_CTRL(led->base),
+				led->flash_cfg->trigger_flash,
+				led->flash_cfg->trigger_flash);
+			if (rc) {
+				dev_err(&led->spmi_dev->dev,
+				"LED %d strobe reg write failed(%d)\n",
+				led->id, rc);
+				goto error_flash_set;
+			}
+		}
 	} else {
 		rc = qpnp_led_masked_write(led,
 			FLASH_LED_STROBE_CTRL(led->base),
@@ -2096,7 +2100,6 @@ static int qpnp_rgb_set(struct qpnp_led_data *led)
 			led->rgb_cfg->pwm_cfg->mode =
 				led->rgb_cfg->pwm_cfg->default_mode;
 		if (led->rgb_cfg->pwm_cfg->mode == PWM_MODE) {
-
 			duty_us = (led->rgb_cfg->pwm_cfg->pwm_period_us *
 				led->cdev.brightness) / LED_FULL;
 			rc = pwm_config_us(led->rgb_cfg->pwm_cfg->pwm_dev,
@@ -2143,6 +2146,7 @@ static void qpnp_led_set(struct led_classdev *led_cdev,
 				enum led_brightness value)
 {
 	struct qpnp_led_data *led;
+
 	led = container_of(led_cdev, struct qpnp_led_data, cdev);
 	if (value < LED_OFF) {
 		dev_err(&led->spmi_dev->dev, "Invalid brightness value\n");
@@ -2210,7 +2214,7 @@ static void __qpnp_led_work(struct qpnp_led_data *led,
 		rc = qpnp_rgb_set(led);
 		if (rc < 0)
 			dev_err(&led->spmi_dev->dev,
-				"RGB set brightness failed (%d)\n", rc);		
+				"RGB set brightness failed (%d)\n", rc);
 		break;
 	case QPNP_ID_LED_MPP:
 		rc = qpnp_mpp_set(led);
@@ -2501,8 +2505,10 @@ static int qpnp_pwm_init(struct pwm_config_data *pwm_cfg,
 		}
 
 		if (pwm_cfg->mode == LPG_MODE) {
-			start_idx =	pwm_cfg->duty_cycles->start_idx;
-			idx_len = pwm_cfg->duty_cycles->num_duty_pcts;
+			start_idx =
+			pwm_cfg->duty_cycles->start_idx;
+			idx_len =
+			pwm_cfg->duty_cycles->num_duty_pcts;
 
 			if (idx_len >= PWM_LUT_MAX_SIZE &&
 					start_idx) {

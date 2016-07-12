@@ -178,6 +178,7 @@ struct lp5523_platform_data {
 	u8	clock_mode;
 	const	char *label;
 };
+
 struct lp5523_engine {
 	int		id;
 	u8		mode;
@@ -245,8 +246,5 @@ typedef enum {
 	EF59_LED_SET_GREEN_LIGHT_VALUE_40,
 	DIMMING_RED_CHARGING = 200, // 2013.12.4 p13106 red dimming in charging.
 }PAN_LED_LP5523_BLINK_CMD;
-
-
-
 
 #endif /* __LINUX_LP5523_H */

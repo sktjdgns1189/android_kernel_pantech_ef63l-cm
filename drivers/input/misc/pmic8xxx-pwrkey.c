@@ -56,9 +56,11 @@ static irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 
 	input_report_key(pwrkey->pwr, KEY_POWER, 1);
 	input_sync(pwrkey->pwr);
+
 #ifdef CONFIG_PANTECH_ERR_CRASH_LOGGING
 	pantech_force_dump_key(KEY_POWER, 1);
 #endif
+
 	return IRQ_HANDLED;
 }
 
@@ -76,9 +78,11 @@ static irqreturn_t pwrkey_release_irq(int irq, void *_pwrkey)
 
 	input_report_key(pwrkey->pwr, KEY_POWER, 0);
 	input_sync(pwrkey->pwr);
+
 #ifdef CONFIG_PANTECH_ERR_CRASH_LOGGING
 	pantech_force_dump_key(KEY_POWER, 0);
 #endif
+
 	return IRQ_HANDLED;
 }
 

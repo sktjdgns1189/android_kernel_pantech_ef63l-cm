@@ -2658,6 +2658,7 @@ static void dwc3_gadget_linksts_change_interrupt(struct dwc3 *dwc,
 #ifdef CONFIG_PANTECH_USB_STATE_DEBUG
 	enum dwc3_link_state	pre = dwc->link_state;
 #endif
+
 	/*
 	 * WORKAROUND: DWC3 Revisions <1.83a have an issue which, depending
 	 * on the link partner, the USB session might do multiple entry/exit

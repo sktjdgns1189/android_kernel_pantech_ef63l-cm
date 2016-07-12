@@ -3431,8 +3431,6 @@ asmlinkage void __sched preempt_schedule_irq(void)
 #endif
 #endif
 
-
-
 		local_irq_enable();
 		__schedule();
 		local_irq_disable();

@@ -406,7 +406,6 @@ int q6asm_get_mqfx_param(int session_id, uint32_t module_id, uint32_t param_id, 
 
 #endif  //CONFIG_PANTECH_SND_QSOUND
 
-
 /* PP specific */
 int q6asm_equalizer(struct audio_client *ac, void *eq);
 

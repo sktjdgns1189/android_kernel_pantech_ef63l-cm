@@ -243,6 +243,7 @@ static int dwc3_otg_start_host(struct usb_otg *otg, int on)
 	struct dwc3_ext_xceiv *ext_xceiv = dotg->ext_xceiv;
 	struct dwc3 *dwc = dotg->dwc;
 	int ret = 0;
+
 #ifdef CONFIG_PANTECH_QUALCOMM_OTG_MODE_OVP_BUG
 	//xsemiyas_debug
 	int value;
@@ -250,6 +251,7 @@ static int dwc3_otg_start_host(struct usb_otg *otg, int on)
 #if defined(CONFIG_PANTECH_USB_SMB_OTG_DISABLE_LOW_BATTERY) || defined(CONFIG_PANTECH_USB_TI_OTG_DISABLE_LOW_BATTERY)
 	int level;
 #endif
+
 	if (!dwc->xhci)
 		return -EINVAL;
 
@@ -269,6 +271,7 @@ static int dwc3_otg_start_host(struct usb_otg *otg, int on)
 		}
 	}
 #endif /* !defined(CONFIG_PANTECH_PMIC_CHARGER_SMB347) && !defined(CONFIG_PANTECH_PMIC_CHARGER_SMB349) && !defined(CONFIG_PANTECH_CHARGER_BQ2419X) */
+
 #if defined(CONFIG_PANTECH_USB_SMB_OTG_DISABLE_LOW_BATTERY) && defined(CONFIG_PANTECH_PMIC_OTG_UVLO)
 	level = max17058_get_soc_for_otg();
 #elif defined(CONFIG_PANTECH_USB_TI_OTG_DISABLE_LOW_BATTERY) && defined(CONFIG_PANTECH_EF63_PMIC_FUELGAUGE_MAX17058)
@@ -276,6 +279,7 @@ static int dwc3_otg_start_host(struct usb_otg *otg, int on)
 #else
 	level = 50;
 #endif
+
 	if (on) {
 		dev_dbg(otg->phy->dev, "%s: turn on host\n", __func__);
 
@@ -369,6 +373,7 @@ static int dwc3_otg_start_host(struct usb_otg *otg, int on)
 			return ret;
 		}
 #endif /* defined(CONFIG_PANTECH_PMIC_CHARGER_SMB347) || defined(CONFIG_PANTECH_PMIC_CHARGER_SMB349) */
+
 		/* re-init OTG EVTEN register as XHCI reset clears it */
 		if (ext_xceiv && !ext_xceiv->otg_capability)
 			dwc3_otg_reset(dotg);
@@ -766,7 +771,7 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 		return 0;
 
 	dev_info(phy->dev, "Avail curr from USB = %u\n", mA);
-    
+
 	if (dotg->charger->max_power <= 2 && mA > 2) {
 		/* Enable charging */
 		if (power_supply_set_online(dotg->psy, true))

@@ -139,7 +139,6 @@ enum {
     HW_PLATFORM_P_EF65S_TP10 = 6515, /* Pantech ef65s tp10 b'd */
     HW_PLATFORM_P_EF65S_TP20 = 6516, /* Pantech ef65s tp10 b'd */
     HW_PLATFORM_P_EF65S_PP10 = 6517, /* Pantech ef65s pp10 b'd */
-
 #endif
 	HW_PLATFORM_INVALID
 };
@@ -1030,13 +1029,13 @@ msm_set_image_version(struct device *dev,
 	char *store_address;
 
 	if (current_image != SMEM_IMAGE_VERSION_PARTITION_APPS)
-	return count;
+		return count;
 	store_address = socinfo_get_image_version_base_address();
 	if (store_address == NULL) {
 		pr_err("%s : Failed to get image version base address",
 				__func__);
 		return count;
-}
+	}
 	store_address += current_image * SMEM_IMAGE_VERSION_SINGLE_BLOCK_SIZE;
 	snprintf(store_address, SMEM_IMAGE_VERSION_NAME_SIZE, "%-.75s", buf);
 	return count;

@@ -228,25 +228,8 @@ static void qpnpint_irq_mask_ack(struct irq_data *d)
 	struct q_perip_data *per_d = irq_d->per_d;
 	int rc;
 	uint8_t prev_int_en = per_d->int_en;
-	
-// added by p13041
-#if 0
-#if defined(CONFIG_MACH_MSM8974_EF63S) || defined(CONFIG_MACH_MSM8974_EF63K) || defined(CONFIG_MACH_MSM8974_EF63L)
-	struct irq_desc *desc;
-	const char *name = "null";
 
-	desc = irq_to_desc(d->irq);
-	if (desc == NULL)
-		name = "stray irq";
-	else if (desc->action && desc->action->name)
-		name = desc->action->name;
-
-	pr_warning("hwirq %lu irq: %d name: %s\n", d->hwirq, d->irq, name);
-#else
-	//pr_debug("hwirq %lu irq: %d\n", d->hwirq, d->irq);
-	pr_warning("hwirq %lu irq: %d\n", d->hwirq, d->irq); //debugging pmic interrupt in sleep
-#endif
-#endif
+	pr_debug("hwirq %lu irq: %d\n", d->hwirq, d->irq);
 
 	if (!chip_d->cb) {
 		pr_warn_ratelimited("No arbiter on bus=%u slave=%u offset=%u\n",

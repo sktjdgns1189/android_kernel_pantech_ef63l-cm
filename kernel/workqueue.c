@@ -1876,8 +1876,6 @@ __acquires(&gcwq->lock)
 	lock_map_acquire_read(&cwq->wq->lockdep_map);
 	lock_map_acquire(&lockdep_map);
 	trace_workqueue_execute_start(work);
-
-    
 	f(work);
 	/*
 	 * While we must be careful to not use "work" after this, the trace

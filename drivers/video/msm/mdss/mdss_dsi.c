@@ -29,6 +29,7 @@
 #ifdef CONFIG_F_SKYDISP_SILENT_BOOT	 //seunghwa_Ji p13832 	
 #include <mach/pantech_sys.h>
 #endif
+
 static unsigned char *mdss_dsi_base;
 
 static int mdss_dsi_regulator_init(struct platform_device *pdev)
@@ -873,7 +874,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		if (ctrl_pdata->on_cmds.link_state == DSI_LP_MODE || ctrl_pdata->magnaic_on_cmds.link_state == DSI_LP_MODE){
 #else
 		if (ctrl_pdata->on_cmds.link_state == DSI_LP_MODE){
-#endif			
+#endif
 #ifdef CONFIG_F_SKYDISP_SILENT_BOOT	
 			if(pdata->silent_backlight  == true)
 				break;
@@ -901,7 +902,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		rc = mdss_dsi_off(pdata);
 		break;
 	case MDSS_EVENT_CONT_SPLASH_FINISH:
-
 		ctrl_pdata->ctrl_state &= ~CTRL_STATE_MDP_ACTIVE;
 #ifdef CONFIG_F_SKYDISP_MAGNAIC_OPERATING_BEFORE_TP20
 		if (ctrl_pdata->on_cmds.link_state == DSI_LP_MODE || ctrl_pdata->magnaic_on_cmds.link_state == DSI_LP_MODE){
@@ -1405,7 +1405,7 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	defined (CONFIG_F_SKYDISP_EF60_SS) ||(defined (CONFIG_F_SKYDISP_EF63_SS) && (CONFIG_BOARD_VER <= CONFIG_PT20))
 /* backlight gpio */
 	ctrl_pdata->bl_en_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
-						     "qcom,platform-bl-en-gpio", 0);
+		"qcom,platform-bl-en-gpio", 0);
 	if (!gpio_is_valid(ctrl_pdata->bl_en_gpio)) {
 		pr_err("%s:%d, Disp_en gpio not specified\n",
 						__func__, __LINE__);
@@ -1829,6 +1829,7 @@ int dsi_panel_device_register(struct device_node *pan_node,
 		}
 	}
 #endif
+
 	if (mdss_dsi_clk_init(ctrl_pdev, ctrl_pdata)) {
 		pr_err("%s: unable to initialize Dsi ctrl clks\n", __func__);
 		return -EPERM;

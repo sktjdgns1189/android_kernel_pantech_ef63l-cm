@@ -58,8 +58,6 @@
 #include "../../arch/arm/mach-msm/include/mach/pantech_sys.h"
 #endif /* CONFIG_PANTECH_FS_AUTO_REPAIR */
 
-
-
 static struct proc_dir_entry *ext4_proc_root;
 static struct kset *ext4_kset;
 static struct ext4_lazy_init *ext4_li_info;

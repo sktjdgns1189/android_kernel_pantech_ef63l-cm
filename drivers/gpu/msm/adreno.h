@@ -19,9 +19,8 @@
 #include "adreno_profile.h"
 #include "kgsl_iommu.h"
 #include <mach/ocmem.h>
-#ifdef CONFIG_F_QUALCOMM_GPU_PATCH_FOR_PAGE_FAULT
+
 #include "a3xx_reg.h"
-#endif
 
 #define DEVICE_3D_NAME "kgsl-3d"
 #define DEVICE_3D0_NAME "kgsl-3d0"
@@ -898,7 +897,6 @@ adreno_get_rptr(struct adreno_ringbuffer *rb)
 	return result;
 }
 
-#ifdef CONFIG_F_QUALCOMM_GPU_PATCH_FOR_PAGE_FAULT
 /*
  * adreno_set_protected_registers() - Protect the specified range of registers
  * from being accessed by the GPU
@@ -927,7 +925,7 @@ static inline void adreno_set_protected_registers(struct kgsl_device *device,
 	BUG_ON(*index >= 16);
 
 	val = 0x60000000 | ((mask_len & 0x1F) << 24) | ((reg << 2) & 0x1FFFF);
-	
+
 	/*
 	 * Write the protection range to the next available protection
 	 * register
@@ -941,7 +939,6 @@ static inline void adreno_set_protected_registers(struct kgsl_device *device,
 void adreno_debugfs_init(struct kgsl_device *device);
 #else
 static inline void adreno_debugfs_init(struct kgsl_device *device) { }
-#endif
 #endif
 
 #endif /*__ADRENO_H */

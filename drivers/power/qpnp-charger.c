@@ -2975,13 +2975,13 @@ get_prop_capacity(struct qpnp_chg_chip *chip)
 		return soc;
 	} else {
 #if defined(CONFIG_PANTECH_PMIC_FUELGAUGE_MAX17058)	
-        soc = max17058_get_soc();	//20130719 djjeon BMS remove
-        if(soc<0)
-            pr_info("No BMS supply registered return 50\n");
-        else
-            return soc;
+		soc = max17058_get_soc();	//20130719 djjeon BMS remove
+		if(soc<0)
+			pr_info("No BMS supply registered return 50\n");
+		else
+			return soc;
 #else
-        pr_debug("No BMS supply registered return 50\n");
+		pr_debug("No BMS supply registered return 50\n");
 #endif	
 	}
 
@@ -3151,24 +3151,24 @@ qpnp_batt_external_power_changed(struct power_supply *psy)
 				qpnp_chg_iusbmax_set(chip, ret.intval / 1000);
 			}
 
-            if ((chip->flags & POWER_STAGE_WA)
-                && ((ret.intval / 1000) > USB_WALL_THRESHOLD_MA)
-                && !chip->power_stage_workaround_running
-                && chip->power_stage_workaround_enable) {
-                chip->power_stage_workaround_running = true;
-                pr_debug("usb wall chg inserted starting power stage workaround charger_monitor = %d\n",
-                         charger_monitor);
-                schedule_work(&chip->reduce_power_stage_work);
-            }
+			if ((chip->flags & POWER_STAGE_WA)
+			&& ((ret.intval / 1000) > USB_WALL_THRESHOLD_MA)
+			&& !chip->power_stage_workaround_running
+			&& chip->power_stage_workaround_enable) {
+				chip->power_stage_workaround_running = true;
+				pr_debug("usb wall chg inserted starting power stage workaround charger_monitor = %d\n",
+						charger_monitor);
+				schedule_work(&chip->reduce_power_stage_work);
+			}
 #ifdef CONFIG_PANTECH_PMIC_ABNORMAL
-            if(((ret.intval / 1000) > USB_WALL_THRESHOLD_MA)
-               && (delayed_work_pending(&chip->update_abnormal_delayed_work))) {
-                chip->nonstandard_state = NONSTANDARD_ACIN;
-                cancel_delayed_work(&chip->update_abnormal_delayed_work);
-        }
+			if(((ret.intval / 1000) > USB_WALL_THRESHOLD_MA)
+			&& (delayed_work_pending(&chip->update_abnormal_delayed_work))) {
+				chip->nonstandard_state = NONSTANDARD_ACIN;
+				cancel_delayed_work(&chip->update_abnormal_delayed_work);
+			}
 #endif /* CONFIG_PANTECH_PMIC_ABNORMAL */
-    }
-    }
+		}
+	}
 
 #if defined(CONFIG_PANTECH_PMIC_CHARGER_SMB349) || defined(CONFIG_PANTECH_PMIC_CHARGER_SMB347)
 #ifdef CONFIG_PANTECH_QUALCOMM_OTG_MODE_OVP_BUG
@@ -4366,6 +4366,7 @@ qpnp_chg_adc_notification(enum qpnp_tm_state state, void *ctx)
 		pr_err("invalid notification %d\n", state);
 		return;
 	}
+
 #if defined(CONFIG_PANTECH_PMIC_CHARGER_SMB349) || defined(CONFIG_PANTECH_PMIC_CHARGER_SMB347)
 	temp = get_prop_batt_temp();
 #else
@@ -4817,13 +4818,13 @@ qpnp_batt_power_set_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_MAX:
 		if (qpnp_chg_is_usb_chg_plugged_in(chip))
-                        rc = qpnp_chg_iusbmax_set(chip, val->intval / 1000);
+			rc = qpnp_chg_iusbmax_set(chip, val->intval / 1000);
 		break;
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_TRIM:
 		rc = qpnp_chg_iusb_trim_set(chip, val->intval);
 		break;
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_SETTLED:
-                rc = qpnp_chg_input_current_settled(chip);
+		rc = qpnp_chg_input_current_settled(chip);
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MIN:
 		rc = qpnp_chg_vinmin_set(chip, val->intval / 1000);
@@ -4833,9 +4834,9 @@ qpnp_batt_power_set_property(struct power_supply *psy,
 	}
 
 	if(!rc) {
-	    pr_debug("psy changed batt_psy\n");
-        power_supply_changed(&chip->batt_psy);
-    }
+		pr_debug("psy changed batt_psy\n");
+		power_supply_changed(&chip->batt_psy);
+	}
 	return rc;
 }
 
@@ -6833,6 +6834,7 @@ qpnp_charger_probe(struct spmi_device *spmi)
 			qpnp_usbin_health_check_work);
 	INIT_WORK(&chip->soc_check_work, qpnp_chg_soc_check_work);
 	INIT_DELAYED_WORK(&chip->aicl_check_work, qpnp_aicl_check_work);
+
 #ifdef CONFIG_PANTECH_PMIC_ABNORMAL
     chip->update_abnormal_wq = create_singlethread_workqueue("abnormal_work");
 	INIT_DELAYED_WORK(&chip->update_abnormal_delayed_work, check_abnormal_worker);
@@ -6845,6 +6847,7 @@ qpnp_charger_probe(struct spmi_device *spmi)
 #ifdef CONFIG_PANTECH_PMIC_USBIN_DROP_WORKAROUND
 	INIT_DELAYED_WORK(&chip->sysok_work, sysok_irq_handler_worker);
 #endif
+
 	if (chip->dc_chgpth_base) {
 		chip->dc_psy.name = "qpnp-dc";
 		chip->dc_psy.type = POWER_SUPPLY_TYPE_MAINS;
@@ -6917,6 +6920,7 @@ qpnp_charger_probe(struct spmi_device *spmi)
 		pr_err("failed to request interrupts %d\n", rc);
 		goto unregister_dc_psy;
 	}
+
 #if defined(CONFIG_PANTECH_PMIC_CHARGER_SMB349) || defined(CONFIG_PANTECH_PMIC_CHARGER_SMB347)
 #if defined(CONFIG_PANTECH_PMIC_EOC)
 	chip->end_recharing = false;
@@ -7090,7 +7094,7 @@ qpnp_charger_remove(struct spmi_device *spmi)
 	power_supply_unregister(&chip->dc_psy);
 	cancel_work_sync(&chip->soc_check_work);
 	cancel_delayed_work_sync(&chip->usbin_health_check);
-        cancel_delayed_work_sync(&chip->arb_stop_work);
+	cancel_delayed_work_sync(&chip->arb_stop_work);
 #if defined(CONFIG_PANTECH_PMIC_PHYSICAL_DROP)
 	cancel_delayed_work(&chip->drop_work); // skkim p14200@LS1
 #endif
@@ -7105,9 +7109,11 @@ qpnp_charger_remove(struct spmi_device *spmi)
 
 	mutex_destroy(&chip->batfet_vreg_lock);
 	mutex_destroy(&chip->jeita_configure_lock);
+
 #if defined(CONFIG_PANTECH_PMIC_USBIN_DROP_WORKAROUND)
 	free_irq(gpio_to_irq(SC_SYSOK), chip);
 #endif
+
 	regulator_unregister(chip->otg_vreg.rdev);
 	regulator_unregister(chip->boost_vreg.rdev);
 

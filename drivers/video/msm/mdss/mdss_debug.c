@@ -517,6 +517,7 @@ int mdss_debugfs_init(struct mdss_data_type *mdata)
 	debugfs_create_file("mtp", 0644, mdd->root, mdata, &mdss_mtp_fops);
 	debugfs_create_file("gamma", 0644, mdd->root, mdata, &mdss_gamma_fops);
 #endif
+
 	debugfs_create_u32("min_mdp_clk", 0644, mdd->root,
 			(u32 *)&mdata->min_mdp_clk);
 

@@ -1074,11 +1074,6 @@ int adreno_profile_process_results(struct kgsl_device *device)
 	 */
 	transfer_results(device, shared_buf_tail);
 
-#ifndef CONFIG_F_QUALCOMM_GPU_PATCH_FOR_PAGE_FAULT
-	/* check for any cleanup */
-	check_close_profile(profile);
-#endif
-
 	return 1;
 }
 

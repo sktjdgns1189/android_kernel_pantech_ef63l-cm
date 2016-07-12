@@ -33,6 +33,7 @@ static struct mdss_dsi_ctrl_pdata *left_ctrl_pdata;
 
 static struct mdss_dsi_ctrl_pdata *ctrl_list[DSI_CTRL_MAX];
 
+
 struct mdss_hw mdss_dsi0_hw = {
 	.hw_ndx = MDSS_HW_DSI0,
 	.ptr = NULL,
@@ -1196,6 +1197,7 @@ int mdss_dsi_cmdlist_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 #else
 		req->cb(ret);
 #endif
+
 	return ret_val;
 }
 
@@ -1227,7 +1229,8 @@ int mdss_dsi_cmdlist_rx(struct mdss_dsi_ctrl_pdata *ctrl,
 		req->cb(len,req->rbuf);
 #else
 		req->cb(len);
-#endif	
+#endif
+
 	return ret;
 }
 
@@ -1464,7 +1467,7 @@ void mdss_dsi_error(struct mdss_dsi_ctrl_pdata *ctrl)
 	mdss_dsi_dln0_phy_err(ctrl);	/* mask0, 0x3e00000 */
 
 	dsi_send_events(ctrl, DSI_EV_MDP_BUSY_RELEASE);
-	}
+}
 
 irqreturn_t mdss_dsi_isr(int irq, void *ptr)
 {

@@ -1245,7 +1245,7 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 				status = diag_send_data(entry, buf, len,
 								data_type);
 				if (status)
-				packet_type = 0;
+					packet_type = 0;
 			} else if (entry.cmd_code == 255
 				  && cmd_code == 75) {
 				if (entry.subsys_id ==
@@ -1257,7 +1257,7 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 					status = diag_send_data(entry, buf,
 								len, data_type);
 					if (status)
-					packet_type = 0;
+						packet_type = 0;
 				}
 			} else if (entry.cmd_code == 255 &&
 				  entry.subsys_id == 255) {
@@ -1268,7 +1268,7 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 					status = diag_send_data(entry, buf, len,
 								 data_type);
 					if (status)
-					packet_type = 0;
+						packet_type = 0;
 				}
 			}
 		}

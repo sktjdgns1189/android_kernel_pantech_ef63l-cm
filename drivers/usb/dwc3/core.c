@@ -178,7 +178,7 @@ static void dwc3_core_soft_reset(struct dwc3 *dwc)
 	reg |= DWC3_GCTL_CORESOFTRESET;
 	dwc3_writel(dwc->regs, DWC3_GCTL, reg);
 
-		dwc3_notify_event(dwc, DWC3_CONTROLLER_RESET_EVENT);
+	dwc3_notify_event(dwc, DWC3_CONTROLLER_RESET_EVENT);
 
 	/* Assert USB3 PHY reset */
 	reg = dwc3_readl(dwc->regs, DWC3_GUSB3PIPECTL(0));
@@ -209,7 +209,7 @@ static void dwc3_core_soft_reset(struct dwc3 *dwc)
 	reg &= ~DWC3_GCTL_CORESOFTRESET;
 	dwc3_writel(dwc->regs, DWC3_GCTL, reg);
 
-		dwc3_notify_event(dwc, DWC3_CONTROLLER_POST_RESET_EVENT);
+	dwc3_notify_event(dwc, DWC3_CONTROLLER_POST_RESET_EVENT);
 }
 
 /**
@@ -792,6 +792,7 @@ static int __devinit dwc3_probe(struct platform_device *pdev)
 #ifdef CONFIG_PANTECH_USB_STATE_DEBUG
 	INIT_DELAYED_WORK(&dwc->state_work, dwc3_state_work);
 #endif
+
 	mode = DWC3_MODE(dwc->hwparams.hwparams0);
 
 	/* Override mode if user selects host-only config with DRD core */
@@ -864,6 +865,7 @@ static int __devinit dwc3_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to initialize debugfs\n");
 		goto err2;
 	}
+
 #if defined(CONFIG_ANDROID_PANTECH_USB_OTG_INTENT)
 	//LS2_USB tarial ssphy tune
 	temp_dwc3 = dwc;

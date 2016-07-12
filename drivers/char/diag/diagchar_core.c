@@ -1950,12 +1950,10 @@ int mask_request_validate(unsigned char mask_buf[])
                 case 0x25:
                     return 1;		
               //]
-              
               // FEATURE_SKY_CP_DMLOGGING_DPL[
                 case 0x2a:
                     return 1;
-              //]			
-			
+              //]
 		default:
 			return 0;
 			break;

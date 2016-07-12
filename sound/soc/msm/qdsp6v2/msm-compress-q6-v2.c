@@ -142,9 +142,9 @@ struct msm_compr_audio {
 	uint32_t drain_ready;
 	uint32_t stream_available;
 	uint32_t next_stream;
-#ifdef CONFIG_PANTECH_SND_QCOM_PATCH // 2014-09-05 hschoi : Qcom patch for getCurrentPosition() issue when music paused EOS.
+
 	uint64_t marker_timestamp;
-#endif
+
 	struct msm_compr_gapless_state gapless_state;
 
 	atomic_t start;
@@ -238,7 +238,7 @@ static int msm_compr_send_buffer(struct msm_compr_audio *prtd)
 
 	pr_debug("%s: bytes_received = %d copied_total = %d\n",
 		__func__, prtd->bytes_received, prtd->copied_total);
-	if (prtd->first_buffer && prtd->gapless_state.use_dsp_gapless_mode)
+	if (prtd->first_buffer &&  prtd->gapless_state.use_dsp_gapless_mode)
 		q6asm_stream_send_meta_data(prtd->audio_client,
 				prtd->audio_client->stream_id,
 				prtd->gapless_state.initial_samples_drop,
@@ -1124,9 +1124,7 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 		prtd->app_pointer  = 0;
 		prtd->bytes_received = 0;
 		prtd->bytes_sent = 0;
-#ifdef CONFIG_PANTECH_SND_QCOM_PATCH // 2014-09-05 hschoi : Qcom patch for getCurrentPosition() issue when music paused EOS.
 		prtd->marker_timestamp = 0;
-#endif
 
 		atomic_set(&prtd->xrun, 0);
 		spin_unlock_irqrestore(&prtd->lock, flags);
@@ -1259,9 +1257,8 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 			prtd->first_buffer = 1;
 			prtd->last_buffer = 0;
 			prtd->gapless_state.gapless_transition = 1;
-#ifdef CONFIG_PANTECH_SND_QCOM_PATCH // 2014-09-05 hschoi : Qcom patch for getCurrentPosition() issue when music paused EOS.
 			prtd->marker_timestamp = 0;
-#endif
+
 			/*
 			Don't reset these as these vars map to
 			total_bytes_transferred and total_bytes_available
@@ -1317,22 +1314,13 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 			q6asm_stream_cmd_nowait(ac, CMD_PAUSE, ac->stream_id);
 			prtd->cmd_ack = 0;
 			spin_unlock_irqrestore(&prtd->lock, flags);
-#ifdef CONFIG_PANTECH_SND_QCOM_PATCH // 2014-09-05 hschoi : Qcom patch for getCurrentPosition() issue when music paused EOS.
+
 			/*
 			 * Cache this time as last known time
 			 */
-			q6asm_get_session_time(prtd->audio_client, &prtd->marker_timestamp);
-			pr_debug("%s: prtd->marker_timestamp = %lld usec \n",
-						__func__, prtd->marker_timestamp);
-#else
-			pr_debug("%s:issue CMD_FLUSH ac->stream_id %d",
-					      __func__, ac->stream_id);
-			q6asm_stream_cmd(ac, CMD_FLUSH, ac->stream_id);
-			wait_event_timeout(prtd->flush_wait,
-					   prtd->cmd_ack, 1 * HZ / 4);
-#endif
+			q6asm_get_session_time(prtd->audio_client,
+					       &prtd->marker_timestamp);
 			spin_lock_irqsave(&prtd->lock, flags);
-#ifdef CONFIG_PANTECH_SND_QCOM_PATCH // 2014-09-05 hschoi : Qcom patch for getCurrentPosition() issue when music paused EOS.
 			/*
 			 * Don't reset these as these vars map to
 			 * total_bytes_transferred and total_bytes_available.
@@ -1343,18 +1331,6 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 			 * do not reset prtd->bytes_sent as well as the same
 			 * session is used for gapless playback
 			 */
-#else
-			/*
-			Don't reset these as these vars map to
-			total_bytes_transferred and total_bytes_available
-			directly, only total_bytes_transferred will be updated
-			in the next avail() ioctl
-			prtd->copied_total = 0;
-			prtd->bytes_received = 0;
-			do not reset prtd->bytes_sent as well as the same
-			session is used for gapless playback
-			*/
-#endif
 			prtd->byte_offset = 0;
 
 			prtd->app_pointer  = 0;
@@ -1362,17 +1338,15 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 			prtd->last_buffer = 0;
 			atomic_set(&prtd->drain, 0);
 			atomic_set(&prtd->xrun, 1);
-#ifndef CONFIG_PANTECH_SND_QCOM_PATCH // 2014-09-05 hschoi : Qcom patch for getCurrentPosition() issue when music paused EOS.
-			q6asm_run_nowait(prtd->audio_client, 0, 0, 0);
-#endif
 			spin_unlock_irqrestore(&prtd->lock, flags);
-#ifdef CONFIG_PANTECH_SND_QCOM_PATCH // 2014-09-05 hschoi : Qcom patch for getCurrentPosition() issue when music paused EOS.
-			pr_debug("%s:issue CMD_FLUSH ac->stream_id %d", __func__, ac->stream_id);
+
+			pr_debug("%s:issue CMD_FLUSH ac->stream_id %d",
+					      __func__, ac->stream_id);
 			q6asm_stream_cmd(ac, CMD_FLUSH, ac->stream_id);
-			wait_event_timeout(prtd->flush_wait, prtd->cmd_ack, 1 * HZ / 4);
+			wait_event_timeout(prtd->flush_wait,
+					   prtd->cmd_ack, 1 * HZ / 4);
 
 			q6asm_run_nowait(prtd->audio_client, 0, 0, 0);
-#endif
 		}
 		prtd->cmd_interrupt = 0;
 		break;
@@ -1500,13 +1474,9 @@ static int msm_compr_pointer(struct snd_compr_stream *cstream,
 				__func__, timestamp);
 			return -EAGAIN;
 		}
-	}
-#ifdef CONFIG_PANTECH_SND_QCOM_PATCH // 2014-09-05 hschoi : Qcom patch for getCurrentPosition() issue when music paused EOS.
-	else {
+	} else {
 		timestamp = prtd->marker_timestamp;
-		pr_debug("%s: prtd->marker_timestamp = %lld usec\n", __func__, prtd->marker_timestamp);	
 	}
-#endif
 
 	/* DSP returns timestamp in usec */
 	pr_debug("%s: timestamp = %lld usec\n", __func__, timestamp);

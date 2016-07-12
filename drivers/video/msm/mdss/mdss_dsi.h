@@ -345,6 +345,7 @@ struct mdss_dsi_ctrl_pdata {
 	struct dsi_panel_cmds magnaic_on_cmds;
 #endif
 	struct dsi_panel_cmds off_cmds;
+
 #ifdef CONFIG_F_SKYDISP_CABC_CONTROL
 	struct dsi_panel_cmds cabc_cmds;
 #endif
@@ -377,6 +378,7 @@ struct mdss_dsi_ctrl_pdata {
 
 	struct dsi_buf tx_buf;
 	struct dsi_buf rx_buf;
+
 #ifdef CONFIG_F_SKYDISP_SMARTDIMMING
 	struct delayed_work panel_read_work;
 	struct mdss_panel_smart_dimming panel_read_mtp;
@@ -399,7 +401,6 @@ struct mdss_dsi_ctrl_pdata {
 	int onflag;
 #endif
 #endif
-	
 };
 
 int dsi_panel_device_register(struct device_node *pan_node,

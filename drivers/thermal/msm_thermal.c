@@ -1803,7 +1803,7 @@ int __devinit msm_thermal_init(struct msm_thermal_data *pdata)
 
 	enabled = 1;
 
-        ecocpu=0; // FEATURE_PANTECH_ECO_CPU_MODE
+	ecocpu=0; // FEATURE_PANTECH_ECO_CPU_MODE
 
 	for_each_possible_cpu(cpu) {
 		cpus[cpu].limited_max_freq = UINT_MAX;

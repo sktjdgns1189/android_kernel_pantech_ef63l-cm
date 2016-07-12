@@ -92,7 +92,6 @@ struct cpufreq_governor cpufreq_gov_ondemand = {
        .owner                  = THIS_MODULE,
 };
 
-
 /* Sampling types */
 enum {DBS_NORMAL_SAMPLE, DBS_SUB_SAMPLE};
 
@@ -1044,7 +1043,8 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 		/* If switching to max speed, apply sampling_down_factor */
 		if (policy->cur < policy->max)
-			this_dbs_info->rate_mult = dbs_tuners_ins.sampling_down_factor;
+			this_dbs_info->rate_mult =
+				dbs_tuners_ins.sampling_down_factor;
 
 		dbs_freq_increase(policy, freq_target);
 #else	

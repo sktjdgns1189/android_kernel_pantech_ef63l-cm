@@ -751,6 +751,7 @@ static void ipv6_del_addr(struct inet6_ifaddr *ifp)
 #ifndef CONFIG_SKY_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX  
 	spin_unlock_bh(&addrconf_hash_lock);
 #endif /* CONFIG_SKY_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX */
+
 	write_lock_bh(&idev->lock);
 #ifdef CONFIG_IPV6_PRIVACY
 	if (ifp->flags&IFA_F_TEMPORARY) {
@@ -2820,7 +2821,7 @@ static int addrconf_ifdown(struct net_device *dev, int how)
 		snmp6_unregister_dev(idev);
 
 	}
-  
+
 #ifdef CONFIG_SKY_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX
 	spin_lock_bh(&addrconf_hash_lock);
 #endif /* CONFIG_SKY_DS_OPTIMIZE_IPV6_ASSIGNMENT_CRASH_FIX */

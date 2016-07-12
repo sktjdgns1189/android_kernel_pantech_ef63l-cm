@@ -2523,7 +2523,7 @@ static int bam_dmux_probe(struct platform_device *pdev)
 
 	rc = bam_ops->smsm_state_cb_register_ptr(SMSM_MODEM_STATE,
 			SMSM_A2_POWER_CONTROL,
-					bam_dmux_smsm_cb, NULL);
+			bam_dmux_smsm_cb, NULL);
 
 	if (rc) {
 		destroy_workqueue(bam_mux_rx_workqueue);
@@ -2534,7 +2534,7 @@ static int bam_dmux_probe(struct platform_device *pdev)
 
 	rc = bam_ops->smsm_state_cb_register_ptr(SMSM_MODEM_STATE,
 			SMSM_A2_POWER_CONTROL_ACK,
-					bam_dmux_smsm_ack_cb, NULL);
+			bam_dmux_smsm_ack_cb, NULL);
 
 	if (rc) {
 		destroy_workqueue(bam_mux_rx_workqueue);

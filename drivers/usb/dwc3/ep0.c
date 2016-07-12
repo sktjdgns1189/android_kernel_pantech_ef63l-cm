@@ -416,6 +416,7 @@ static int dwc3_ep0_handle_feature(struct dwc3 *dwc,
 				return -EINVAL;
 			if (dwc->speed != DWC3_DSTS_SUPERSPEED)
 				return -EINVAL;
+
 #ifndef CONFIG_PANTECH_SIO_TEMP
 			reg = dwc3_readl(dwc->regs, DWC3_DCTL);
 			if (set)
@@ -431,6 +432,7 @@ static int dwc3_ep0_handle_feature(struct dwc3 *dwc,
 				return -EINVAL;
 			if (dwc->speed != DWC3_DSTS_SUPERSPEED)
 				return -EINVAL;
+
 #ifndef CONFIG_PANTECH_SIO_TEMP
 			reg = dwc3_readl(dwc->regs, DWC3_DCTL);
 			if (set)
@@ -569,6 +571,7 @@ static int dwc3_ep0_set_config(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 			reg |= (DWC3_DCTL_ACCEPTU1ENA | DWC3_DCTL_ACCEPTU2ENA);
 			dwc3_writel(dwc->regs, DWC3_DCTL, reg);
 #endif
+
 			dwc->resize_fifos = true;
 			dev_dbg(dwc->dev, "resize fifos flag SET\n");
 		}

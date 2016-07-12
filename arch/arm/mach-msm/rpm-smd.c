@@ -1277,6 +1277,7 @@ static int msm_rpm_send_data(struct msm_rpm_request *cdata,
 		ret = cdata->msg_hdr.msg_id;
 		return ret;
 	}
+
 #ifdef OEM_DDR_CLK_CONVERSION_SWITCH
 	if (msm_rpm_debug_mask & MSM_RPM_USER_REQUEST_DDR_CLK)
 	{
@@ -1287,6 +1288,7 @@ static int msm_rpm_send_data(struct msm_rpm_request *cdata,
 		}	
 	}
 #endif
+
 	msm_rpm_add_wait_list(cdata->msg_hdr.msg_id);
 
 	ret = msm_rpm_send_smd_buffer(&cdata->buf[0], msg_size, noirq);

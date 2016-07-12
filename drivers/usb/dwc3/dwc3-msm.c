@@ -3027,7 +3027,7 @@ static int dwc3_msm_power_get_property_usb(struct power_supply *psy,
 		val->intval = mdwc->vbus_active;
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
-#ifdef CONFIG_PANTECH_QUALCOMM_OTG_MODE_OVP_BUG 
+#ifdef CONFIG_PANTECH_QUALCOMM_OTG_MODE_OVP_BUG
         switch(mdwc->charger.chg_type) {
         case DWC3_SDP_CHARGER:
         case DWC3_PROPRIETARY_CHARGER:

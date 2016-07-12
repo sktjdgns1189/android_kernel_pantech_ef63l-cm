@@ -91,10 +91,10 @@ static int32_t msm_led_trigger_config(struct msm_led_flash_ctrl_t *fctrl,
 				curr_l = fctrl->torch_op_current;
 				pr_err("LED current clamped to %d\n",
 					curr_l);
-                        }
+			}
 			led_trigger_event(fctrl->torch_trigger,
-                                curr_l);
-                }
+				curr_l);
+		}
 #endif
 		break;
 
@@ -229,7 +229,7 @@ static int32_t msm_led_trigger_probe(struct platform_device *pdev)
 				/* use fake current */
 				fctrl.flash_op_current[i] = LED_FULL;
 			} else {
-                                rc = of_property_read_u32(flash_src_node,
+				rc = of_property_read_u32(flash_src_node,
 					"qcom,current",
 					&fctrl.flash_op_current[i]);
 				rc_1 = of_property_read_u32(flash_src_node,
@@ -267,8 +267,8 @@ static int32_t msm_led_trigger_probe(struct platform_device *pdev)
 				goto torch_failed;
 			}
 
-				CDBG("default trigger %s\n",
-					fctrl.torch_trigger_name);
+			CDBG("default trigger %s\n",
+				fctrl.torch_trigger_name);
 
 			if (flashtype == GPIO_FLASH) {
 				/* use fake current */
@@ -292,13 +292,13 @@ static int32_t msm_led_trigger_probe(struct platform_device *pdev)
 					goto torch_failed;
 				}
 
-					CDBG("torch max_current %d\n",
-						fctrl.torch_op_current);
+				CDBG("torch max_current %d\n",
+					fctrl.torch_op_current);
 
-					led_trigger_register_simple(
-						fctrl.torch_trigger_name,
-						&fctrl.torch_trigger);
-				}
+				led_trigger_register_simple(
+					fctrl.torch_trigger_name,
+					&fctrl.torch_trigger);
+			}
 torch_failed:
 			of_node_put(flash_src_node);
 		}

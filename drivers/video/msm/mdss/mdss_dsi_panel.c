@@ -24,7 +24,6 @@
 #include <linux/workqueue.h>
 #include <linux/msm_tsens.h>
 
-
 #include "mdss_fb.h"
 #include "mdss_dsi.h"
 #include "mdss_mdp.h"
@@ -37,6 +36,7 @@ extern struct msm_fb_data_type * mfdmsm_fb_get_mfd(void);
 #define DT_CMD_HDR 6
 #define NEW_REV	1
 #define OLD_REV	0
+
 DEFINE_LED_TRIGGER(bl_led_trigger);
 
 #ifdef F_LSI_VDDM_OFFSET_RD_WR 
@@ -159,8 +159,8 @@ u32 mdss_dsi_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl, char cmd0,
 
 	return 0;
 }
-
 #endif
+
 static void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_panel_cmds *pcmds)
 {
@@ -180,6 +180,7 @@ static void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
 }
+
 #if defined (CONFIG_F_SKYDISP_EF56_SS) || defined (CONFIG_F_SKYDISP_EF59_SS) || defined (CONFIG_F_SKYDISP_EF60_SS)
 static char led_pwm1[3] = {0x51, 0x00, 0x00};	/* DTYPE_DCS_LWRITE */
 static struct dsi_cmd_desc backlight_cmd = {
@@ -389,6 +390,7 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
 }
 #endif
+
 void mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 {
 #if defined (CONFIG_F_SKYDISP_EF56_SS) || defined (CONFIG_F_SKYDISP_EF59_SS) ||defined (CONFIG_F_SKYDISP_EF60_SS) ||(defined (CONFIG_F_SKYDISP_EF63_SS) && (CONFIG_BOARD_VER <= CONFIG_PT20)) 
@@ -1317,6 +1319,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	mipi  = &pdata->panel_info.mipi;
 
 	pr_debug("%s: ctrl=%p ndx=%d\n", __func__, ctrl, ctrl->ndx);
+
 #if defined (CONFIG_F_SKYDISP_EF63_SS) && (CONFIG_BOARD_VER >= CONFIG_WS10)
 	gpio_set_value((ctrl->octa_rst_gpio), 1);
 	msleep(10);
@@ -1329,7 +1332,6 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 #ifdef CONFIG_F_SKYDISP_CMDS_CONTROL	
 	if(ctrl->lcd_cmds_check == false){
 #endif
-
 		if (ctrl->on_cmds.cmd_cnt){
 #if defined(CONFIG_MACH_MSM8974_EF56S) || defined(CONFIG_F_SKYDISP_EF60_SS)
 	       	if(ctrl->lcd_on_skip_during_bootup)
@@ -1338,7 +1340,6 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	      		 if(ctrl->lcd_on_skip_during_bootup)
 				ctrl->on_cmds.buf[160] = 0x00;
 #endif
-
 #ifdef F_SKYDISP_MAGNAIC_OPERATING_BEFORE_TP20
 			if(ctrl->manufacture_id == MAGNA_DRIVER_IC)
 				mdss_dsi_panel_cmds_send(ctrl, &ctrl->magnaic_on_cmds);
@@ -1353,7 +1354,6 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 		pr_info("user LCD on cmds---------------->\n");
 	}
 #endif
-
 #ifdef F_LSI_VDDM_OFFSET_RD_WR
 		if(ctrl->manufacture_id == SAMSUNG_DRIVER_IC){
 			mdss_dsi_panel_cmds_send(ctrl, &ctrl->vddm_offset_write_cmds);
@@ -1362,6 +1362,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 #endif
 		}
 #endif
+
 	pr_err("%s:-\n", __func__);
 	return 0;
 }
@@ -1396,6 +1397,7 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 #ifdef CONFIG_F_SKYDISP_HBM_FOR_AMOLED
 	//pdata->hbm_flag = 0;
 #endif
+
 	pr_err("%s:-\n", __func__);
 	return 0;
 }
@@ -1519,7 +1521,6 @@ static int mdss_dsi_parse_dcs_cmds(struct device_node *np,
 
 	pr_err("%s: dcs_cmd=%x len=%d, cmd_cnt=%d link_state=%d\n", __func__,
 		pcmds->buf[0], pcmds->blen, pcmds->cmd_cnt, pcmds->link_state);
-
 
 	return 0;
 
@@ -1978,6 +1979,7 @@ static int mdss_panel_parse_dt(struct device_node *np,
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->vddm_offset_write_cmds,
 		"qcom,mdss-dsi-panel-ldi-vddm-offset-write-cmds", "qcom,mdss-dsi-on-command-state");
 #endif
+
 	return 0;
 
 error:
@@ -1996,6 +1998,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 	int i = 0;
 	oem_pm_smem_vendor1_data_type *smem_id_vendor1_ptr;
 #endif 
+
 	if (!node) {
 		pr_err("%s: no panel node\n", __func__);
 		return -ENODEV;
