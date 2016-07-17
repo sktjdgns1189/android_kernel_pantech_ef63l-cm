@@ -49,12 +49,29 @@
 #include "modem_notifier.h"
 #include "platsmp.h"
 
+#include <linux/persistent_ram.h>
 #ifndef CONFIG_PANTECH_SNS_PIXART_VLED_PWR_CONTROLED_BY_DDF
 #include <mach/gpio.h>
 #include <linux/gpio.h>
 #include <linux/i2c.h>
 #endif
 
+
+static struct platform_device *ram_console_dev;
+
+static struct persistent_ram_descriptor msm_prd[] __initdata = {
+	{
+		.name = "ram_console",
+		.size = SZ_1M,
+	},
+};
+
+static struct persistent_ram msm_pr __initdata = {
+	.descs = msm_prd,
+	.num_descs = ARRAY_SIZE(msm_prd),
+	.start = PLAT_PHYS_OFFSET + SZ_1G + SZ_256M,
+	.size = SZ_1M,
+};
 
 static struct memtype_reserve msm8974_reserve_table[] __initdata = {
 	[MEMTYPE_SMI] = {
@@ -86,6 +103,7 @@ void __init msm_8974_reserve(void)
 
 static void __init msm8974_early_memory(void)
 {
+	persistent_ram_early_init(&msm_pr);
 	reserve_info = &msm8974_reserve_info;
 	of_scan_flat_dt(dt_scan_for_memory_hole, msm8974_reserve_table);
 }
@@ -112,6 +130,24 @@ void __init msm8974_add_drivers(void)
 		msm_clock_init(&msm8974_clock_init_data);
 	tsens_tm_init_driver();
 	msm_thermal_device_init();
+}
+
+static void __init oppo_config_ramconsole(void)
+{
+	int ret;
+
+	ram_console_dev = platform_device_alloc("ram_console", -1);
+	if (!ram_console_dev) {
+		pr_err("%s: Unable to allocate memory for RAM console device",
+				__func__);
+		return;
+	}
+
+	ret = platform_device_add(ram_console_dev);
+	if (ret) {
+		pr_err("%s: Unable to add RAM console device", __func__);
+		return;
+	}
 }
 
 static struct of_dev_auxdata msm_hsic_host_adata[] = {
@@ -178,6 +214,7 @@ void __init msm8974_init(void)
 	regulator_has_full_constraints();
 	board_dt_populate(adata);
 	msm8974_add_drivers();
+	oppo_config_ramconsole();
 
 #ifndef CONFIG_PANTECH_SNS_PIXART_VLED_PWR_CONTROLED_BY_DDF
     {
