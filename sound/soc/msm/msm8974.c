@@ -1464,6 +1464,10 @@ static const struct snd_kcontrol_new msm_snd_controls[] = {
 		     msm_btsco_rate_get, msm_btsco_rate_put),
 	SOC_ENUM_EXT("HDMI_RX SampleRate", msm_snd_enum[7],
 			hdmi_rx_sample_rate_get, hdmi_rx_sample_rate_put),
+#ifdef CONFIG_PANTECH_SND_BOOTUP_HEADSET_INFO
+	SOC_ENUM_EXT("Headset Status", msm_snd_enum[8], headset_status_get,
+			headset_status_set),
+#endif
 };
 
 static bool msm8974_swap_gnd_mic(struct snd_soc_codec *codec)
