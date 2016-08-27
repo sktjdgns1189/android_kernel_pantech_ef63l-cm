@@ -84,7 +84,6 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata, int enable)
 			gpio_set_value((ctrl_pdata->lcd_vddio_reg_en_gpio), 1);
 			msleep(10);
 
-#if (0)  // 20140410, kkcho, Set-changed after cpl-patch.
 		if (!pdata->panel_info.mipi.lp11_init) {
 			ret = mdss_dsi_panel_reset(pdata, 1);
 			if (ret) {
@@ -96,8 +95,7 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata, int enable)
 					pr_err("Disable vregs failed\n");
 				goto error;
 			}
-		}
-#endif		
+		}	
 
 	} else {
 		ret = mdss_dsi_panel_reset(pdata, 0);
