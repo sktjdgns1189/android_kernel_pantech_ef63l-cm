@@ -57,6 +57,9 @@
 #ifdef OFFLINE_CHARGER_TOUCH_DISABEL
 #include <mach/msm_smsm.h>
 #endif
+#ifdef CONFIG_POWERSUSPEND
+#include <linux/powersuspend.h>
+#endif
 
 
 /* -------------------------------------------------------------------- */
@@ -70,6 +73,19 @@ static int mxt_suspend(struct i2c_client *client, pm_message_t mesg);
 void	MXT_reprogram(void);
 uint8_t	MXT_Boot(bool withReset);
 #endif // MXT_FIRMUP_ENABLE
+#ifdef CONFIG_POWERSUSPEND
+static void mxt_early_suspend(struct power_suspend *h) {
+	pm_message_t pm_null={0};
+	mxt_suspend(NULL, pm_null);
+}
+static void mxt_late_resume(struct power_suspend *h) {
+	mxt_resume(NULL);
+}
+static struct power_suspend mxt_power_suspend = {
+	.suspend = mxt_early_suspend,
+	.resume = mxt_late_resume,
+};
+#endif
 
 /*------------------------------ functions prototype -----------------------------------*/
 uint8_t init_touch_driver(void);
@@ -4610,6 +4626,9 @@ static int mxt_remove(struct i2c_client *client)
 #ifdef TOUCH_IO
 	misc_deregister(&touch_io);
 #endif //TOUCH_IO
+#ifdef CONFIG_POWERSUSPEND
+	unregister_power_suspend(&mxt_power_suspend);
+#endif
 
 	input_unregister_device(mxt_fw30_data->input_dev);
 	input_free_device(mxt_fw30_data->input_dev);
@@ -4926,6 +4945,9 @@ static int __devinit mxt_probe(struct i2c_client *client, const struct i2c_devic
 	mxt_fw30_data->state = APPMODE;
 	dbg_hw("Atmel Max Touch Probe Complete!\n");
 	touch_probe_state=1;
+#ifdef CONFIG_POWERSUSPEND
+	register_power_suspend(&mxt_power_suspend);
+#endif
 	return 0;
 
 err_input_register_device_failed:
